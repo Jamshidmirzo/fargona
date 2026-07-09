@@ -6,6 +6,9 @@ router.get('/', museumController.getAllMuseums);
 router.post('/', museumController.createMuseum);
 router.get('/:id', museumController.getMuseumById);
 router.put('/:id', museumController.updateMuseum);
+router.delete('/:id', museumController.deleteMuseum);
 router.get('/:id/quiz', museumController.getMuseumQuiz);
+router.post('/:id/quizzes', museumController.createQuizQuestion);
+router.delete('/:id/quizzes/:quizId', museumController.deleteQuizQuestion);
 
 module.exports = router;

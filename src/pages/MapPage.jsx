@@ -83,8 +83,8 @@ export default function MapPage() {
     let best = Infinity;
     museums.forEach(o => {
       if (o.id === selectedMuseum.id) return;
-      const c1 = MUSEUM_COORDS[selectedMuseum.id] || [40.48, 71.35];
-      const c2 = MUSEUM_COORDS[o.id] || [40.48, 71.35];
+      const c1 = selectedMuseum.coords || MUSEUM_COORDS[selectedMuseum.id] || [40.48, 71.35];
+      const c2 = o.coords || MUSEUM_COORDS[o.id] || [40.48, 71.35];
       const km = haversineKm(c1[0], c1[1], c2[0], c2[1]);
       if (km < best) { 
         best = km; 
@@ -112,7 +112,7 @@ export default function MapPage() {
             {museums.map(m => {
               const customIcon = createIcon(m.id === selected, m);
               return (
-              <Marker key={m.id} position={MUSEUM_COORDS[m.id] || [40, 71]} icon={customIcon} eventHandlers={{ click: () => setSelected(m.id) }}>
+              <Marker key={m.id} position={m.coords || MUSEUM_COORDS[m.id] || [40.48, 71.35]} icon={customIcon} eventHandlers={{ click: () => setSelected(m.id) }}>
                 <Popup className="fh-popup" autoPan={false}>
                   <div style={{ padding: '6px 2px', minWidth: 200 }}>
                     <div style={{ fontFamily: 'var(--font-head)', fontSize: 16, fontWeight: 700, color: 'var(--fg)', lineHeight: 1.2 }}>{(m[lang] || m.uz || m.ru || m.en || m).name}</div>

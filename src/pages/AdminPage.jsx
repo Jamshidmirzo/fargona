@@ -28,6 +28,7 @@ export default function AdminPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editId, setEditId] = useState(null);
+  const [formLang, setFormLang] = useState(lang);
   
   const handleSave = async (e) => {
     e.preventDefault();
@@ -37,8 +38,8 @@ export default function AdminPage() {
     try {
       const isNew = editId === 'new';
       const url = isNew 
-        ? `${API_URL}/api/museums?lang=${lang}` 
-        : `${API_URL}/api/museums/${editId}?lang=${lang}`;
+        ? `${API_URL}/api/museums?lang=${formLang}` 
+        : `${API_URL}/api/museums/${editId}?lang=${formLang}`;
         
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
@@ -229,48 +230,117 @@ export default function AdminPage() {
                 <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, margin: '0 0 8px', color: 'var(--fg)' }}>Museums Database</h1>
                 <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15 }}>Manage {mCount} locations across the Fergana Valley.</p>
               </div>
-              <button className="btn-primary" style={{ padding: '12px 24px', fontSize: 14 }} onClick={() => setEditId('new')}>+ Add New Museum</button>
+              <button className="btn-primary" style={{ padding: '12px 24px', fontSize: 14 }} onClick={() => { setEditId('new'); setFormLang(lang); }}>+ Add New Museum</button>
             </header>
             
             {editId ? (() => {
               const isNew = editId === 'new';
-              const mData = isNew ? {} : (museums.find(m => m.id === editId)?.[lang] || museums.find(m => m.id === editId)?.uz || {});
+              const museumObj = museums.find(m => m.id === editId) || {};
+              const mData = isNew ? {} : (museumObj[formLang] || museumObj.uz || museumObj.ru || museumObj.en || {});
               const mInfo = mData.info || {};
               return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', padding: 40, animation: 'fhRise .3s ease' }}>
                 <h3 style={{ margin: '0 0 24px', fontFamily: 'var(--font-head)', fontSize: 28, color: 'var(--fg)' }}>
                   {isNew ? 'Create New Museum' : `Edit Museum: ${editId}`}
                 </h3>
+                
+                {/* Language Switcher Tabs */}
+                <div style={{ display: 'flex', gap: 8, marginBottom: 30, borderBottom: '1px solid var(--line)', paddingBottom: 16 }}>
+                  {['uz', 'ru', 'en'].map(l => (
+                    <button type="button" key={l} onClick={() => setFormLang(l)} style={{
+                      fontFamily: 'var(--font-ui)', cursor: 'pointer', padding: '8px 16px', borderRadius: 8,
+                      border: formLang === l ? '1px solid var(--accent)' : '1px solid var(--line)',
+                      background: formLang === l ? 'var(--accent)' : 'var(--surface2)',
+                      color: formLang === l ? 'var(--accent-fg)' : 'var(--muted)',
+                      fontWeight: formLang === l ? 600 : 400,
+                      fontSize: 13.5
+                    }}>
+                      {l.toUpperCase()} {l === lang ? '(Active UI)' : ''}
+                    </button>
+                  ))}
+                </div>
+
                 <form onSubmit={handleSave}>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                    {isNew && (
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Unique ID (English lowercase, no spaces, e.g. "al_farghani")</label>
+                        <input name="id" type="text" placeholder="e.g. al_farghani" required style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      </div>
+                    )}
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Name ({lang})</label>
-                      <input name="name" type="text" defaultValue={mData.name} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Name ({formLang.toUpperCase()})</label>
+                      <input name="name" type="text" defaultValue={mData.name || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Address</label>
-                      <input name="address" type="text" defaultValue={mInfo.address} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Address ({formLang.toUpperCase()})</label>
+                      <input name="address" type="text" defaultValue={mInfo.address || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Founded</label>
-                      <input name="founded" type="text" defaultValue={mInfo.founded} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Founded Date ({formLang.toUpperCase()})</label>
+                      <input name="founded" type="text" defaultValue={mInfo.founded || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Hours</label>
-                      <input name="hours" type="text" defaultValue={mInfo.hours} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Hours ({formLang.toUpperCase()})</label>
+                      <input name="hours" type="text" defaultValue={mInfo.hours || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Entry Fee</label>
-                      <input name="entry" type="text" defaultValue={mInfo.entry} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Entry Fee ({formLang.toUpperCase()})</label>
+                      <input name="entry" type="text" defaultValue={mInfo.entry || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Phone</label>
-                      <input name="phone" type="text" defaultValue={mInfo.phone} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <input name="phone" type="text" defaultValue={mInfo.phone || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
                     </div>
-                    
+
+                    <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>City (Select location category)</label>
+                      <select name="city" defaultValue={museumObj.city || 'kokand'} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }}>
+                        <option value="kokand">Qo'qon / Коканд / Kokand</option>
+                        <option value="margilan">Marg'ilon / Маргилан / Margilan</option>
+                        <option value="fergana">Farg'ona / Фергана / Fergana</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Established Year (Number, e.g. 1959)</label>
+                      <input name="established" type="number" defaultValue={museumObj.established || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Author Birth Year (Number, e.g. 1889)</label>
+                      <input name="birth" type="number" defaultValue={museumObj.birth || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Author Death Year (Number, e.g. 1929)</label>
+                      <input name="death" type="number" defaultValue={museumObj.death || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+
+                    <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Real GPS Latitude (e.g. 40.525)</label>
+                      <input name="lat" type="number" step="any" defaultValue={museumObj.coords?.[0] || ''} placeholder="40.5" style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Real GPS Longitude (e.g. 70.945)</label>
+                      <input name="lon" type="number" step="any" defaultValue={museumObj.coords?.[1] || ''} placeholder="70.9" style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>2D Layout Grid X position (0 to 100)</label>
+                      <input name="pos_x" type="number" step="any" defaultValue={museumObj.pos?.x ?? 50} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>2D Layout Grid Y position (0 to 100)</label>
+                      <input name="pos_y" type="number" step="any" defaultValue={museumObj.pos?.y ?? 50} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                    </div>
+
+                    <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
+
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Biography ({lang})</label>
-                      <textarea name="bio" defaultValue={mData.bio} rows={6} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none', resize: 'vertical', lineHeight: 1.5 }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Biography ({formLang.toUpperCase()})</label>
+                      <textarea name="bio" defaultValue={mData.bio || ''} rows={6} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none', resize: 'vertical', lineHeight: 1.5 }} />
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
@@ -317,7 +387,18 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                            <button onClick={() => setEditId(m.id)} style={{ padding: '8px 16px', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontWeight: 500, transition: 'all .2s' }}>Edit</button>
+                            <button onClick={() => { setEditId(m.id); setFormLang(lang); }} style={{ padding: '8px 16px', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontWeight: 500, transition: 'all .2s' }}>Edit</button>
+                            <button onClick={async () => {
+                              if (window.confirm('Are you sure you want to delete this museum?')) {
+                                try {
+                                  const res = await fetch(`${API_URL}/api/museums/${m.id}`, { method: 'DELETE' });
+                                  if (res.ok) window.location.reload();
+                                  else alert('Failed to delete museum');
+                                } catch (e) {
+                                  alert('Error deleting museum');
+                                }
+                              }
+                            }} style={{ padding: '8px 16px', fontSize: 13, background: '#D32F2F', border: '1px solid #D32F2F', borderRadius: 8, cursor: 'pointer', color: 'white', fontWeight: 500, transition: 'all .2s', marginLeft: 8 }}>Delete</button>
                           </td>
                         </tr>
                       ))}
@@ -329,13 +410,161 @@ export default function AdminPage() {
           </div>
         )}
 
-        {/* OTHER TABS */}
-        {['quizzes', 'settings'].includes(activeTab) && (
+        {/* QUIZZES TAB */}
+        {activeTab === 'quizzes' && (() => {
+          // Flatten quizzes with museum context
+          const allQuizzes = [];
+          museums.forEach(m => {
+            const mData = m[lang] || m.uz || {};
+            const qList = mData.quiz || [];
+            qList.forEach(q => {
+              allQuizzes.push({
+                museumId: m.id,
+                museumName: mData.name,
+                questionId: q.id,
+                q: q.q,
+                options: q.options,
+                a: q.a
+              });
+            });
+          });
+
+          return (
+            <div style={{ animation: 'fhFade .3s ease both' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 32, alignItems: 'start' }}>
+                
+                {/* LIST OF EXISTING QUIZZES */}
+                <div style={{ background: 'var(--surface)', borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', padding: 32 }}>
+                  <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 26, margin: '0 0 24px', color: 'var(--fg)' }}>Active Quiz Questions</h2>
+                  
+                  {allQuizzes.length === 0 ? (
+                    <div style={{ color: 'var(--muted)', textAlign: 'center', padding: '40px 0' }}>No quiz questions configured yet.</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                      {allQuizzes.map((q, idx) => (
+                        <div key={q.questionId || idx} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 20, background: 'var(--surface2)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 12 }}>
+                            <div>
+                              <div style={{ fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600, marginBottom: 4 }}>
+                                {q.museumName}
+                              </div>
+                              <h4 style={{ fontSize: 16, margin: 0, color: 'var(--fg)', fontWeight: 600 }}>{q.q}</h4>
+                            </div>
+                            <button 
+                              onClick={async () => {
+                                if (window.confirm('Delete this quiz question?')) {
+                                  try {
+                                    const res = await fetch(`${API_URL}/api/museums/${q.museumId}/quizzes/${q.questionId}`, { method: 'DELETE' });
+                                    if (res.ok) window.location.reload();
+                                    else alert('Failed to delete question');
+                                  } catch (e) {
+                                    alert('Error deleting question');
+                                  }
+                                }
+                              }}
+                              style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer', transition: 'all .2s' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                            {q.options.map((opt, oIdx) => (
+                              <div key={oIdx} style={{ fontSize: 13.5, padding: '8px 12px', borderRadius: 8, background: q.a === oIdx ? 'color-mix(in srgb, #2E7D32 10%, transparent)' : 'var(--surface)', border: q.a === oIdx ? '1px solid #2E7D32' : '1px solid var(--line)', color: q.a === oIdx ? '#2E7D32' : 'var(--fg)', fontWeight: q.a === oIdx ? 600 : 400 }}>
+                                {oIdx + 1}. {opt} {q.a === oIdx ? '✓' : ''}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ADD NEW QUESTION FORM */}
+                <div style={{ background: 'var(--surface)', borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', padding: 32 }}>
+                  <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 26, margin: '0 0 24px', color: 'var(--fg)' }}>Add Quiz Question</h2>
+                  
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target);
+                    const museumId = formData.get('museumId');
+                    const question = formData.get('question');
+                    const options = [
+                      formData.get('opt0'),
+                      formData.get('opt1'),
+                      formData.get('opt2'),
+                      formData.get('opt3')
+                    ];
+                    const answer = parseInt(formData.get('answer'), 10);
+
+                    try {
+                      const res = await fetch(`${API_URL}/api/museums/${museumId}/quizzes?lang=${lang}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ question, options, answer })
+                      });
+                      if (res.ok) {
+                        window.location.reload();
+                      } else {
+                        alert('Failed to add quiz question');
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert('Error adding quiz question');
+                    }
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Select Museum</label>
+                        <select name="museumId" required style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 15, outline: 'none' }}>
+                          {museums.map(m => (
+                            <option key={m.id} value={m.id}>{(m[lang] || m.uz || {}).name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Question Text ({lang.toUpperCase()})</label>
+                        <input name="question" type="text" required placeholder="e.g. In which year was the poet born?" style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Options ({lang.toUpperCase()})</label>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          <input name="opt0" type="text" required placeholder="Option 1" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14.5, outline: 'none' }} />
+                          <input name="opt1" type="text" required placeholder="Option 2" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14.5, outline: 'none' }} />
+                          <input name="opt2" type="text" required placeholder="Option 3" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14.5, outline: 'none' }} />
+                          <input name="opt3" type="text" required placeholder="Option 4" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14.5, outline: 'none' }} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Correct Option Index</label>
+                        <select name="answer" required style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 15, outline: 'none' }}>
+                          <option value="0">Option 1</option>
+                          <option value="1">Option 2</option>
+                          <option value="2">Option 3</option>
+                          <option value="3">Option 4</option>
+                        </select>
+                      </div>
+
+                      <button type="submit" className="btn-primary" style={{ padding: 16, fontSize: 15, marginTop: 8 }}>Add Question</button>
+                    </div>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* SETTINGS TAB */}
+        {activeTab === 'settings' && (
           <div style={{ animation: 'fhFade .3s ease both', color: 'var(--muted)', padding: '80px 40px', textAlign: 'center', border: '1px dashed var(--line)', borderRadius: 'calc(var(--radius) * 1.5)' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
             <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, color: 'var(--fg)', margin: '0 0 12px' }}>Under Construction</h2>
             <p style={{ margin: 0, fontSize: 15, maxWidth: 400, marginInline: 'auto', lineHeight: 1.5 }}>
-              The <strong>{activeTab}</strong> module is currently in development. Global statistics and configuration will be available soon.
+              The <strong>settings</strong> module is currently in development. Configuration will be available soon.
             </p>
           </div>
         )}

@@ -25,3 +25,4 @@ dist-ssr
 
 # Database
 server/database.sqlite
+.vercel

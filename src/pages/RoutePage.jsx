@@ -44,7 +44,7 @@ export default function RoutePage() {
 
         // 1. Calculate distance from user to all museums
         let unvisited = museums.map(m => {
-          const coords = MUSEUM_COORDS[m.id];
+          const coords = m.coords || MUSEUM_COORDS[m.id];
           const dist = coords ? haversineKm(latitude, longitude, coords[0], coords[1]) : Infinity;
           return { ...m, distToUser: dist };
         });
@@ -61,8 +61,8 @@ export default function RoutePage() {
         while (unvisited.length > 0) {
           // Find closest to current
           unvisited.forEach(u => {
-            const c1 = MUSEUM_COORDS[current.id];
-            const c2 = MUSEUM_COORDS[u.id];
+            const c1 = current.coords || MUSEUM_COORDS[current.id];
+            const c2 = u.coords || MUSEUM_COORDS[u.id];
             u.tempDist = (c1 && c2) ? haversineKm(c1[0], c1[1], c2[0], c2[1]) : Infinity; 
           });
           unvisited.sort((a, b) => a.tempDist - b.tempDist);
@@ -85,15 +85,15 @@ export default function RoutePage() {
   
   // Add distance from user to first museum if userLoc exists
   if (userLoc && routeMuseums.length > 0) {
-    const firstCoords = MUSEUM_COORDS[routeMuseums[0].id];
+    const firstCoords = routeMuseums[0].coords || MUSEUM_COORDS[routeMuseums[0].id];
     if (firstCoords) {
       totalKm += haversineKm(userLoc.lat, userLoc.lon, firstCoords[0], firstCoords[1]);
     }
   }
 
   for (let i = 0; i < routeMuseums.length - 1; i++) {
-    const c1 = MUSEUM_COORDS[routeMuseums[i].id];
-    const c2 = MUSEUM_COORDS[routeMuseums[i+1].id];
+    const c1 = routeMuseums[i].coords || MUSEUM_COORDS[routeMuseums[i].id];
+    const c2 = routeMuseums[i+1].coords || MUSEUM_COORDS[routeMuseums[i+1].id];
     if (c1 && c2) {
       totalKm += haversineKm(c1[0], c1[1], c2[0], c2[1]);
     }

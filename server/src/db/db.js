@@ -11,4 +11,12 @@ const db = new Database(dbPath);
 const schema = fs.readFileSync(schemaPath, 'utf-8');
 db.exec(schema);
 
+// Migration: Add lat/lon if not exists
+try {
+  db.exec('ALTER TABLE museums ADD COLUMN lat REAL;');
+  db.exec('ALTER TABLE museums ADD COLUMN lon REAL;');
+} catch (e) {
+  // Column already exists
+}
+
 module.exports = db;
