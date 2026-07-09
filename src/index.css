@@ -1,0 +1,924 @@
+/* ============================================================
+   FARGONA HERITAGE GUIDE — Design System
+   Single source of truth for all styles.
+   ============================================================ */
+
+/* ----------------------------------------------------------
+   0. FONTS (Google Fonts)
+   ---------------------------------------------------------- */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Manrope:wght@300;400;500;600&family=Spectral:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
+
+/* ----------------------------------------------------------
+   1. DESIGN TOKENS — Light (default)
+   ---------------------------------------------------------- */
+:root {
+  --bg: #f4efe6;
+  --surface: #faf6ee;
+  --surface2: #ece4d5;
+  --fg: #20190f;
+  --muted: #7c7059;
+  --line: #ddd1bd;
+  --accent: #a2683d;
+  --accent-fg: #fff;
+  --soft: #e7dccb;
+  --indigo: #2f4b7c;
+  --gold: #b8893f;
+  --radius: 4px;
+  --font-head: 'Playfair Display', Georgia, serif;
+  --font-body: 'Spectral', Georgia, serif;
+  --font-ui: 'Manrope', system-ui, sans-serif;
+}
+
+/* ----------------------------------------------------------
+   2. DESIGN TOKENS — Dark
+   ---------------------------------------------------------- */
+[data-theme='dark'] {
+  --bg: #171308;
+  --surface: #1e1810;
+  --surface2: #271f14;
+  --fg: #f1e8d6;
+  --muted: #a99a7e;
+  --line: #2f2618;
+  --accent: #c4894f;
+  --accent-fg: #171308;
+  --soft: #2a2013;
+  --indigo: #7f97c8;
+  --gold: #cda75f;
+}
+
+/* ----------------------------------------------------------
+   3. RESET
+   ---------------------------------------------------------- */
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.65;
+  transition: background 0.3s, color 0.3s;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+img,
+video,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+ul, ol {
+  list-style: none;
+}
+
+/* ----------------------------------------------------------
+   4. LINKS
+   ---------------------------------------------------------- */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: opacity 0.2s;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* ----------------------------------------------------------
+   5. SELECTION
+   ---------------------------------------------------------- */
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+/* ----------------------------------------------------------
+   6. SCROLLBAR
+   ---------------------------------------------------------- */
+/* Webkit browsers */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Leaflet overrides */
+.leaflet-container {
+  font-family: var(--font-ui) !important;
+  background: var(--surface2) !important;
+}
+.custom-popup .leaflet-popup-content-wrapper {
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border-radius: var(--radius);
+}
+.custom-popup .leaflet-popup-tip {
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+.custom-popup .leaflet-popup-content {
+  margin: 14px 18px;
+}
+
+/* Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) transparent;
+}
+
+/* ----------------------------------------------------------
+   7. FOCUS-VISIBLE (Accessibility)
+   ---------------------------------------------------------- */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ----------------------------------------------------------
+   8. KEYFRAME ANIMATIONS
+   ---------------------------------------------------------- */
+@keyframes fhReveal {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0 0 0 0); }
+}
+
+@keyframes fhFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes fhRise {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fhArch {
+  0%   { transform: scale(0.92) rotate(-2deg); opacity: 0; }
+  60%  { transform: scale(1.02) rotate(0.5deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ----------------------------------------------------------
+   9. CONTAINER
+   ---------------------------------------------------------- */
+.container {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ----------------------------------------------------------
+   10. BUTTONS
+   ---------------------------------------------------------- */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(176, 79, 40, 0.3);
+  opacity: 0.95;
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--surface);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, transform 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--surface2);
+  border-color: var(--muted);
+  transform: translateY(-1px);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: transparent;
+  color: var(--accent);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.95rem;
+  border-radius: var(--radius);
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-ghost:hover {
+  background: var(--soft);
+  color: var(--fg);
+}
+
+/* ----------------------------------------------------------
+   11. CARD
+   ---------------------------------------------------------- */
+.nfrow {
+  transition: padding-left .35s ease, background .35s ease;
+}
+.nfrow:hover {
+  padding-left: 20px !important;
+  background: var(--surface2) !important;
+}
+.nfrow:hover .nfname {
+  color: var(--accent) !important;
+}
+.nfrow:hover .nfarrow {
+  opacity: 1 !important;
+  transform: translateX(0) !important;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  transition: transform 0.25s, box-shadow 0.25s, border-color 0.25s;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 30px rgba(42, 28, 16, 0.08);
+  border-color: var(--gold);
+}
+
+/* ----------------------------------------------------------
+   12. BADGE
+   ---------------------------------------------------------- */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  background: var(--soft);
+  color: var(--muted);
+  font-family: var(--font-ui);
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 20px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* ----------------------------------------------------------
+   13. SECTION LABEL & PAGE TITLES
+   ---------------------------------------------------------- */
+.section-label {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.page-title {
+  font-family: var(--font-head);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--fg);
+  margin-bottom: 12px;
+}
+
+.page-subtitle {
+  font-family: var(--font-body);
+  font-size: 1.1rem;
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: 600px;
+}
+
+/* ----------------------------------------------------------
+   14. DIVIDER
+   ---------------------------------------------------------- */
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--line);
+  margin: 32px 0;
+}
+
+/* ----------------------------------------------------------
+   15. MUSEUM GRID
+   ---------------------------------------------------------- */
+.grid-museums {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+/* ----------------------------------------------------------
+   16. SKELETON LOADER
+   ---------------------------------------------------------- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface2) 25%,
+    var(--soft) 50%,
+    var(--surface2) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius);
+}
+
+/* ----------------------------------------------------------
+   17. NAV PILL BUTTONS
+   ---------------------------------------------------------- */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-pill:hover {
+  background: var(--soft);
+  color: var(--fg);
+}
+
+.nav-pill.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+/* ----------------------------------------------------------
+   18. QUIZ OPTION BUTTONS
+   ---------------------------------------------------------- */
+.quiz-option {
+  display: block;
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--surface);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--fg);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+
+.quiz-option:hover {
+  border-color: var(--gold);
+  background: var(--surface2);
+  transform: translateX(4px);
+}
+
+.quiz-option.correct {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+.quiz-option.wrong {
+  border-color: #e53935;
+  background: rgba(229, 57, 53, 0.1);
+}
+
+.quiz-option.selected {
+  border-color: var(--accent);
+  background: var(--soft);
+}
+
+/* ----------------------------------------------------------
+   19. TIMELINE
+   ---------------------------------------------------------- */
+.timeline {
+  position: relative;
+  padding-left: 32px;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 32px;
+  animation: fhRise 0.5s ease both;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -29px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  background: var(--accent);
+  border: 3px solid var(--bg);
+  border-radius: 50%;
+  z-index: 1;
+}
+
+/* ----------------------------------------------------------
+   20. ROUTE STOPS
+   ---------------------------------------------------------- */
+.route-stop {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.route-stop:hover {
+  border-color: var(--gold);
+  box-shadow: 0 4px 16px rgba(42, 28, 16, 0.06);
+}
+
+.route-stop-number {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  font-size: 0.9rem;
+  border-radius: 50%;
+}
+
+/* ----------------------------------------------------------
+   21. PASSPORT STAMP
+   ---------------------------------------------------------- */
+.passport-stamp {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 110px;
+  height: 110px;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  font-family: var(--font-ui);
+  text-align: center;
+  padding: 12px;
+  position: relative;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.passport-stamp::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed var(--accent);
+  border-radius: 50%;
+  opacity: 0.4;
+}
+
+.passport-stamp:hover {
+  transform: rotate(-5deg) scale(1.05);
+  box-shadow: 0 4px 20px rgba(176, 79, 40, 0.2);
+}
+
+.passport-stamp.collected {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+
+.passport-stamp.collected::after {
+  border-color: var(--accent-fg);
+}
+
+/* ----------------------------------------------------------
+   22. FORMS
+   ---------------------------------------------------------- */
+input[type='text'],
+input[type='email'],
+input[type='password'],
+input[type='search'],
+input[type='number'],
+input[type='url'],
+select,
+textarea {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--surface);
+  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(176, 79, 40, 0.12);
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M6 8L1 3h10z' fill='%236d5940'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+label {
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 6px;
+}
+
+/* ----------------------------------------------------------
+   23. LEAFLET MAP OVERRIDES
+   ---------------------------------------------------------- */
+.leaflet-popup-content-wrapper {
+  background: var(--surface) !important;
+  color: var(--fg) !important;
+  border-radius: var(--radius) !important;
+  box-shadow: 0 4px 20px rgba(42, 28, 16, 0.12) !important;
+  border: 1px solid var(--line) !important;
+  font-family: var(--font-body) !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--surface) !important;
+  border: 1px solid var(--line) !important;
+}
+
+.leaflet-popup-close-button {
+  color: var(--muted) !important;
+}
+
+.leaflet-popup-close-button:hover {
+  color: var(--accent) !important;
+}
+
+.leaflet-container {
+  font-family: var(--font-body) !important;
+  border-radius: var(--radius);
+}
+
+/* ----------------------------------------------------------
+   24. ADMIN SIDEBAR
+   ---------------------------------------------------------- */
+.admin-sidebar {
+  width: 260px;
+  min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  padding: 24px 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  overflow-y: auto;
+  transition: transform 0.3s;
+  z-index: 100;
+}
+
+.admin-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--muted);
+  transition: background 0.15s, color 0.15s;
+}
+
+.admin-sidebar-link:hover {
+  background: var(--soft);
+  color: var(--fg);
+}
+
+.admin-sidebar-link.active {
+  color: var(--accent);
+  background: var(--soft);
+  border-right: 3px solid var(--accent);
+}
+
+/* ----------------------------------------------------------
+   25. ADMIN CONTENT AREA
+   ---------------------------------------------------------- */
+.admin-content {
+  margin-left: 260px;
+  padding: 32px;
+  min-height: 100vh;
+}
+
+/* ----------------------------------------------------------
+   26. TABLES
+   ---------------------------------------------------------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+}
+
+.data-table thead {
+  background: var(--surface2);
+}
+
+.data-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  border-bottom: 2px solid var(--line);
+}
+
+.data-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  color: var(--fg);
+}
+
+.data-table tbody tr {
+  transition: background 0.15s;
+}
+
+.data-table tbody tr:hover {
+  background: var(--soft);
+}
+
+/* ----------------------------------------------------------
+   27. RESPONSIVE — TABLET (≤ 768px)
+   ---------------------------------------------------------- */
+@media (max-width: 768px) {
+  .page-title {
+    font-size: 2rem;
+  }
+
+  .grid-museums {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 0 16px;
+  }
+
+  .admin-sidebar {
+    transform: translateX(-100%);
+  }
+
+  .admin-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .admin-content {
+    margin-left: 0;
+    padding: 20px;
+  }
+
+  .passport-stamp {
+    width: 90px;
+    height: 90px;
+    font-size: 0.8rem;
+  }
+}
+
+/* ----------------------------------------------------------
+   28. RESPONSIVE — MOBILE (≤ 480px)
+   ---------------------------------------------------------- */
+@media (max-width: 480px) {
+  body {
+    font-size: 15px;
+  }
+
+  .page-title {
+    font-size: 1.6rem;
+  }
+
+  .page-subtitle {
+    font-size: 1rem;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 10px 20px;
+    font-size: 0.85rem;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .route-stop {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .data-table {
+    font-size: 0.8rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+  }
+}
+
+/* ----------------------------------------------------------
+   29. PRINT STYLES
+   ---------------------------------------------------------- */
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 12pt;
+  }
+
+  .admin-sidebar,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .nav-pill {
+    display: none !important;
+  }
+
+  .admin-content {
+    margin-left: 0;
+  }
+
+  .card {
+    break-inside: avoid;
+    border: 1px solid #ccc;
+    box-shadow: none;
+  }
+
+  a {
+    color: #000;
+    text-decoration: underline;
+  }
+
+  .page-title {
+    font-size: 20pt;
+  }
+}
+
+/* ----------------------------------------------------------
+   30. SCROLL ANIMATIONS (TIMELINE)
+   ---------------------------------------------------------- */
+.timeline-item {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.timeline-item.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.timeline-item .timeline-dot {
+  transform: scale(0.5);
+  opacity: 0;
+}
+
+.timeline-item.visible .timeline-dot {
+  transform: scale(1);
+  opacity: 1;
+}
+
+/* ----------------------------------------------------------
+   31. VIRTUAL TOUR ANIMATIONS
+   ---------------------------------------------------------- */
+@keyframes kenburns {
+  0% { transform: scale(1) translate(0, 0); }
+  100% { transform: scale(1.15) translate(-1%, -1%); }
+}
+
+.kenburns-active {
+  animation: kenburns 15s linear forwards;
+}
