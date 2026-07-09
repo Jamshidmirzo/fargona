@@ -2,6 +2,7 @@ import { useLang } from '../contexts/LangContext';
 import { useMuseums } from '../contexts/MuseumsContext';
 import MuseumCard from '../components/MuseumCard';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../config';
 
 export default function HomePage() {
   const { museums, loading } = useMuseums();
@@ -44,7 +45,7 @@ export default function HomePage() {
           <div style={{ animation: 'fhArch 1.2s cubic-bezier(.5,0,.2,1) both', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ position: 'relative', height: 'min(78vh, 644px)', border: '1px solid var(--line)', borderRadius: '50% 50% 4px 4px / 30% 30% 4px 4px', overflow: 'hidden', background: 'var(--surface2)' }}>
               <div style={{ position: 'absolute', inset: 9, border: '1px solid color-mix(in srgb, var(--accent) 45%, transparent)', borderRadius: '50% 50% 3px 3px / 30% 30% 3px 3px', zIndex: 4, pointerEvents: 'none' }}></div>
-              <img src="http://localhost:3000/uploads/al_farghani.jpg" alt="Ahmad Al-Farghani" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={`${API_URL}/uploads/al_farghani.jpg`} alt="Ahmad Al-Farghani" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 13, justifyContent: 'center' }}>
               <span style={{ width: 26, height: 1, background: 'var(--line)' }}></span>

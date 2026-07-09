@@ -6,6 +6,7 @@ import { useMuseums } from '../contexts/MuseumsContext';
 import QuizPlayer from '../components/QuizPlayer';
 import ExpositionPlayer from '../components/ExpositionPlayer';
 import { useEffect } from 'react';
+import { API_URL } from '../config';
 
 function distKm(a, b) {
   if (a.city === b.city) return ({ kokand: 2.0, margilan: 1.2, fergana: 0.8 })[a.city] || 1.5;
@@ -65,7 +66,7 @@ export default function MuseumPage() {
 
       <div style={{ position: 'relative', height: 'min(52vh, 440px)', width: '100%', overflow: 'hidden', border: '1px solid var(--line)', borderRadius: 'var(--radius)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {museum.heroImage ? (
-          <img src={`http://localhost:3000${museum.heroImage}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={`${API_URL}${museum.heroImage}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         ) : (
           <div style={{ color: 'var(--muted)', fontFamily: 'var(--font-ui)', fontSize: 14, letterSpacing: '.1em' }}>{t.photoHere}</div>
         )}

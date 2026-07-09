@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext';
 import { useSaved } from '../contexts/SavedContext';
 import { epithets, CITIES } from '../data/museums';
+import { API_URL } from '../config';
 
 export default function MuseumCard({ museum, index, useCardView = false }) {
   const navigate = useNavigate();
@@ -34,7 +35,7 @@ export default function MuseumCard({ museum, index, useCardView = false }) {
             color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-ui)', letterSpacing: '.1em'
           }}>
             {museum.heroImage ? (
-              <img src={`http://localhost:3000${museum.heroImage}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={`${API_URL}${museum.heroImage}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             ) : t.photoHere}
           </div>
           <div style={{

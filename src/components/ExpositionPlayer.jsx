@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../contexts/LangContext';
+import { API_URL } from '../config';
 
 export default function ExpositionPlayer({ museum, onExit }) {
   const { lang, t } = useLang();
@@ -16,8 +17,8 @@ export default function ExpositionPlayer({ museum, onExit }) {
         exhibitTitle: ex,
         hallIndex: hIdx + 1,
         // Using our existing sample images from 1 to 12
-        imgSrc: `http://localhost:3000/uploads/image${(imgCounter % 12) + 1}.jpeg`,
-        fallbackSrc: `http://localhost:3000/uploads/image${(imgCounter % 12) + 1}.png`
+        imgSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.jpeg`,
+        fallbackSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.png`
       });
       imgCounter++;
     });

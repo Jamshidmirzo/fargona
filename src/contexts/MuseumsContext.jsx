@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { useLang } from './LangContext';
+import { API_URL } from '../config';
 
 const MuseumsContext = createContext();
 
@@ -10,7 +11,7 @@ export function MuseumsProvider({ children }) {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`http://localhost:3000/api/museums?lang=${lang}`)
+    fetch(`${API_URL}/api/museums?lang=${lang}`)
       .then(res => res.json())
       .then(data => {
         setMuseums(data);

@@ -5,6 +5,7 @@ import { useLang } from '../contexts/LangContext';
 import { CITIES, CITY_KM, MUSEUM_COORDS  } from '../data/museums';
 import { useMuseums } from '../contexts/MuseumsContext';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../config';
 
 function distKm(a, b) {
   if (a.city === b.city) return ({ kokand: 2, margilan: 1.2, fergana: 0.8 })[a.city] || 1.5;
@@ -25,7 +26,7 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 
 function createIcon(isSelected, museum) {
   const imgHtml = museum?.heroImage 
-    ? `<img src="http://localhost:3000${museum.heroImage}" style="width:100%; height:100%; object-fit:cover;" />` 
+    ? `<img src="${API_URL}${museum.heroImage}" style="width:100%; height:100%; object-fit:cover;" />` 
     : '';
   
   return L.divIcon({
@@ -130,7 +131,7 @@ export default function MapPage() {
             <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', overflow: 'hidden', animation: 'fhRise .4s cubic-bezier(0.2, 0.8, 0.2, 1) both', boxShadow: '0 8px 30px rgba(0,0,0,0.06)' }}>
               {selectedMuseum.heroImage ? (
                  <div style={{ width: '100%', height: 180, overflow: 'hidden' }}>
-                   <img src={`http://localhost:3000${selectedMuseum.heroImage}`} alt={(selectedMuseum[lang] || selectedMuseum.uz || selectedMuseum.ru || selectedMuseum.en || selectedMuseum).name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                   <img src={`${API_URL}${selectedMuseum.heroImage}`} alt={(selectedMuseum[lang] || selectedMuseum.uz || selectedMuseum.ru || selectedMuseum.en || selectedMuseum).name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                  </div>
               ) : null}
               <div style={{ padding: 26 }}>

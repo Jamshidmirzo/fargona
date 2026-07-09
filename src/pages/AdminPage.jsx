@@ -3,6 +3,7 @@ import { useLang } from '../contexts/LangContext';
 import { useMuseums } from '../contexts/MuseumsContext';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../config';
 
 const mockTraffic = [
   { name: 'Mon', visits: 1200 },
@@ -36,8 +37,8 @@ export default function AdminPage() {
     try {
       const isNew = editId === 'new';
       const url = isNew 
-        ? `http://localhost:3000/api/museums?lang=${lang}` 
-        : `http://localhost:3000/api/museums/${editId}?lang=${lang}`;
+        ? `${API_URL}/api/museums?lang=${lang}` 
+        : `${API_URL}/api/museums/${editId}?lang=${lang}`;
         
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
@@ -297,7 +298,7 @@ export default function AdminPage() {
                           <td style={{ padding: '16px 24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                               <div style={{ width: 44, height: 44, borderRadius: 10, overflow: 'hidden', background: 'var(--surface2)', flexShrink: 0, border: '1px solid var(--line)' }}>
-                                {m.heroImage && <img src={`http://localhost:3000${m.heroImage}`} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
+                                {m.heroImage && <img src={`${API_URL}${m.heroImage}`} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
                               </div>
                               <div>
                                 <div style={{ color: 'var(--fg)', fontWeight: 600, fontSize: 15, marginBottom: 3 }}>{(m[lang] || m.uz || m.ru || m.en || m).name}</div>
