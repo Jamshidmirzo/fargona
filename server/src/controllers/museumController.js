@@ -33,7 +33,7 @@ exports.getAllMuseums = (req, res) => {
     });
 
     // Fetch all exhibits for the language and group by museum_id
-    const exhibitsStmt = db.prepare('SELECT id, museum_id, title, description, image, audio FROM exhibits WHERE lang = ?');
+    const exhibitsStmt = db.prepare('SELECT id, museum_id, title, desc AS description, image_url AS image FROM exhibits WHERE lang = ?');
     const allExhibits = exhibitsStmt.all(lang);
 
     const exhibitsByMuseum = {};
@@ -108,7 +108,7 @@ exports.getMuseumById = (req, res) => {
     const allQuizzes = quizzesStmt.all(id, lang);
     const quiz = allQuizzes.map(q => ({ id: q.id, q: q.q, options: JSON.parse(q.options), a: q.a }));
 
-    const exhibitsStmt = db.prepare('SELECT id, title, description, image, audio FROM exhibits WHERE museum_id = ? AND lang = ?');
+    const exhibitsStmt = db.prepare('SELECT id, title, desc AS description, image_url AS image FROM exhibits WHERE museum_id = ? AND lang = ?');
     const exhibits = exhibitsStmt.all(id, lang);
     
     const result = {
@@ -335,10 +335,10 @@ exports.createExhibit = (req, res) => {
   try {
     const { id } = req.params; // museum_id
     const { lang = 'uz' } = req.query;
-    const { title, description, image, audio } = req.body;
+    const { title, description, image } = req.body;
     
-    const stmt = db.prepare('INSERT INTO exhibits (museum_id, lang, title, description, image, audio) VALUES (?, ?, ?, ?, ?, ?)');
-    const result = stmt.run(id, lang, title || '', description || '', image || '', audio || '');
+    const stmt = db.prepare('INSERT INTO exhibits (museum_id, lang, hall_num, title, desc, image_url) VALUES (?, ?, 1, ?, ?, ?)');
+    const result = stmt.run(id, lang, title || '', description || '', image || '');
     
     res.json({ success: true, id: result.lastInsertRowid });
   } catch (error) {
