@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../contexts/LangContext';
 import { useSaved } from '../contexts/SavedContext';
+import { API_URL } from '../config';
 
 export default function QuizPlayer({ museum, onBack }) {
   const { lang, t } = useLang();
@@ -24,11 +25,32 @@ export default function QuizPlayer({ museum, onBack }) {
     setAnswers(a);
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!canNext) return;
     if (isLast) {
       const sc = answers.reduce((s, a, idx) => s + (quiz[idx] && a === quiz[idx].a ? 1 : 0), 0);
       saveQuizScore(museum.id, sc, quiz.length);
+      
+      try {
+        let username = localStorage.getItem('fh_username');
+        if (!username) {
+          username = 'User_' + Math.floor(Math.random() * 9000 + 1000);
+          localStorage.setItem('fh_username', username);
+        }
+        await fetch(`${API_URL}/api/museums/quiz-stats`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            museum_id: museum.id,
+            username,
+            score: sc,
+            total: quiz.length
+          })
+        });
+      } catch (err) {
+        console.error('Failed to submit quiz stats', err);
+      }
+      
       setDone(true);
     } else {
       setQi(qi + 1);

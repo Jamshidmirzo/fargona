@@ -6,21 +6,15 @@ import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config';
 
 const mockTraffic = [
-  { name: 'Mon', visits: 1200 },
-  { name: 'Tue', visits: 1350 },
-  { name: 'Wed', visits: 1100 },
-  { name: 'Thu', visits: 1700 },
-  { name: 'Fri', visits: 1900 },
-  { name: 'Sat', visits: 2400 },
-  { name: 'Sun', visits: 2200 },
+  { name: 'Mon', visits: 120 },
+  { name: 'Tue', visits: 150 },
+  { name: 'Wed', visits: 110 },
+  { name: 'Thu', visits: 170 },
+  { name: 'Fri', visits: 190 },
+  { name: 'Sat', visits: 240 },
+  { name: 'Sun', visits: 220 },
 ];
 
-const mockActivity = [
-  { id: 1, user: 'User_492', action: 'completed quiz', target: 'Uvaysiy', time: '12m ago', score: '5/5' },
-  { id: 2, user: 'User_118', action: 'started virtual tour', target: 'Hamza', time: '1h ago', score: null },
-  { id: 3, user: 'User_844', action: 'saved museum', target: 'Haziniy', time: '3h ago', score: null },
-  { id: 4, user: 'User_021', action: 'completed quiz', target: 'Muqimiy', time: '5h ago', score: '4/5' },
-];
 
 export default function AdminPage() {
   const { museums, loading } = useMuseums();
@@ -125,35 +119,27 @@ export default function AdminPage() {
   const totalCorrect = quizStats.reduce((sum, s) => sum + s.score, 0);
   const avgScoreStr = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) + '%' : '82%';
 
-  const recentQuizCompletions = quizStats.length > 0
-    ? quizStats.slice(0, 5).map(s => {
-        const mus = museums.find(m => m.id === s.museum_id) || {};
-        const musName = (mus[lang] || mus.uz || {}).name || s.museum_id;
-        return {
-          id: s.id,
-          user: s.username,
-          action: 'completed quiz for',
-          target: musName,
-          score: `${s.score}/${s.total}`,
-          time: new Date(s.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        };
-      })
-    : mockActivity;
+  const recentQuizCompletions = quizStats.slice(0, 5).map(s => {
+      const mus = museums.find(m => m.id === s.museum_id) || {};
+      const musName = (mus[lang] || mus.uz || {}).name || s.museum_id;
+      return {
+        id: s.id,
+        user: s.username,
+        action: 'completed quiz for',
+        target: musName,
+        score: `${s.score}/${s.total}`,
+        time: new Date(s.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+    });
 
-  const mockQuizData = museums.map(m => ({
-    name: (m[lang] || m.uz || m.ru || m.en || m).name?.split(' ')[0] || 'Unknown', // short name
-    completions: Math.floor(Math.random() * 400) + 100
-  }));
 
-  const completionsByMuseum = quizStats.length > 0
-    ? museums.map(m => {
-        const count = quizStats.filter(s => s.museum_id === m.id).length;
-        return {
-          name: (m[lang] || m.uz || {}).name?.split(' ')[0] || m.id,
-          completions: count
-        };
-      })
-    : mockQuizData;
+  const completionsByMuseum = museums.map(m => {
+      const count = quizStats.filter(s => s.museum_id === m.id).length;
+      return {
+        name: (m[lang] || m.uz || {}).name?.split(' ')[0] || m.id,
+        completions: count
+      };
+    });
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
