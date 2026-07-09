@@ -7,22 +7,35 @@ export default function ExpositionPlayer({ museum, onExit }) {
   
   // Flatten all exhibits across all halls into a single continuous array
   const allExhibits = [];
-  let imgCounter = 1;
-  
-  (t.halls || []).forEach((hall, hIdx) => {
-    hall.exhibits.forEach((ex, eIdx) => {
+  const dbExhibits = (museum[lang] || museum.uz || {}).exhibits || [];
+
+  if (dbExhibits.length > 0) {
+    dbExhibits.forEach((ex, idx) => {
       allExhibits.push({
-        hallTitle: hall.title,
-        hallSubtitle: hall.subtitle,
-        exhibitTitle: ex,
-        hallIndex: hIdx + 1,
-        // Using our existing sample images from 1 to 12
-        imgSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.jpeg`,
-        fallbackSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.png`
+        hallTitle: ex.title || 'Exhibition Object',
+        hallSubtitle: ex.description || '',
+        exhibitTitle: ex.title || 'Artifact',
+        hallIndex: idx + 1,
+        imgSrc: ex.image ? `${API_URL}${ex.image}` : `${API_URL}/uploads/image${(idx % 12) + 1}.jpeg`,
+        fallbackSrc: `${API_URL}/uploads/image${(idx % 12) + 1}.png`
       });
-      imgCounter++;
     });
-  });
+  } else {
+    let imgCounter = 1;
+    (t.halls || []).forEach((hall, hIdx) => {
+      hall.exhibits.forEach((ex, eIdx) => {
+        allExhibits.push({
+          hallTitle: hall.title,
+          hallSubtitle: hall.subtitle,
+          exhibitTitle: ex,
+          hallIndex: hIdx + 1,
+          imgSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.jpeg`,
+          fallbackSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.png`
+        });
+        imgCounter++;
+      });
+    });
+  }
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);

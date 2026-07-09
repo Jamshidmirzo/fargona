@@ -31,6 +31,22 @@ exports.getAllMuseums = (req, res) => {
       if (!quizzesByMuseum[q.museum_id]) quizzesByMuseum[q.museum_id] = [];
       quizzesByMuseum[q.museum_id].push({ id: q.id, q: q.q, options: JSON.parse(q.options), a: q.a });
     });
+
+    // Fetch all exhibits for the language and group by museum_id
+    const exhibitsStmt = db.prepare('SELECT id, museum_id, title, description, image, audio FROM exhibits WHERE lang = ?');
+    const allExhibits = exhibitsStmt.all(lang);
+
+    const exhibitsByMuseum = {};
+    allExhibits.forEach(ex => {
+      if (!exhibitsByMuseum[ex.museum_id]) exhibitsByMuseum[ex.museum_id] = [];
+      exhibitsByMuseum[ex.museum_id].push({
+        id: ex.id,
+        title: ex.title,
+        description: ex.description,
+        image: ex.image,
+        audio: ex.audio
+      });
+    });
     
     // Group back into objects similar to frontend expectations
     const result = museums.map(m => ({
@@ -57,7 +73,8 @@ exports.getAllMuseums = (req, res) => {
           phone: m.phone
         },
         events: eventsByMuseum[m.id] || [],
-        quiz: quizzesByMuseum[m.id] || []
+        quiz: quizzesByMuseum[m.id] || [],
+        exhibits: exhibitsByMuseum[m.id] || []
       }
     }));
     
@@ -90,6 +107,9 @@ exports.getMuseumById = (req, res) => {
     const quizzesStmt = db.prepare('SELECT id, question AS q, options, answer AS a FROM quizzes WHERE museum_id = ? AND lang = ?');
     const allQuizzes = quizzesStmt.all(id, lang);
     const quiz = allQuizzes.map(q => ({ id: q.id, q: q.q, options: JSON.parse(q.options), a: q.a }));
+
+    const exhibitsStmt = db.prepare('SELECT id, title, description, image, audio FROM exhibits WHERE museum_id = ? AND lang = ?');
+    const exhibits = exhibitsStmt.all(id, lang);
     
     const result = {
       id: m.id,
@@ -115,7 +135,8 @@ exports.getMuseumById = (req, res) => {
           phone: m.phone
         },
         events: events,
-        quiz: quiz
+        quiz: quiz,
+        exhibits: exhibits
       }
     };
     
@@ -153,14 +174,16 @@ exports.updateMuseum = (req, res) => {
     const { id } = req.params;
     const { lang = 'uz' } = req.query;
     const { 
-      city, birth, death, established, pos_x, pos_y, lat, lon,
+      city, birth, death, established, pos_x, pos_y, lat, lon, heroImage, hero_image,
       name, owner, role, lifespan, tagline, bio, address, founded, hours, entry, phone 
     } = req.body;
+
+    const finalHeroImage = heroImage !== undefined ? heroImage : hero_image;
     
     // Update main museums table
     const stmtMuseum = db.prepare(`
       UPDATE museums 
-      SET city = ?, birth = ?, death = ?, established = ?, pos_x = ?, pos_y = ?, lat = ?, lon = ?
+      SET city = ?, birth = ?, death = ?, established = ?, pos_x = ?, pos_y = ?, lat = ?, lon = ?, hero_image = ?
       WHERE id = ?
     `);
     stmtMuseum.run(
@@ -172,6 +195,7 @@ exports.updateMuseum = (req, res) => {
       pos_y !== undefined && pos_y !== '' ? parseFloat(pos_y) : null,
       lat !== undefined && lat !== '' ? parseFloat(lat) : null,
       lon !== undefined && lon !== '' ? parseFloat(lon) : null,
+      finalHeroImage || null,
       id
     );
     
@@ -205,14 +229,15 @@ exports.updateMuseum = (req, res) => {
 exports.createMuseum = (req, res) => {
   try {
     const { 
-      id, city, birth, death, established, pos_x, pos_y, lat, lon,
+      id, city, birth, death, established, pos_x, pos_y, lat, lon, heroImage, hero_image,
       name, owner, role, lifespan, tagline, bio, address, founded, hours, entry, phone 
     } = req.body;
     
     const finalId = id || 'museum_' + Date.now();
     const finalCity = city || 'kokand';
+    const finalHeroImage = heroImage !== undefined ? heroImage : hero_image;
     
-    const stmt1 = db.prepare('INSERT INTO museums (id, city, pos_x, pos_y, birth, death, established, lat, lon) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    const stmt1 = db.prepare('INSERT INTO museums (id, city, pos_x, pos_y, birth, death, established, lat, lon, hero_image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     stmt1.run(
       finalId, 
       finalCity, 
@@ -222,7 +247,8 @@ exports.createMuseum = (req, res) => {
       death || '', 
       established || '',
       lat !== undefined && lat !== '' ? parseFloat(lat) : null,
-      lon !== undefined && lon !== '' ? parseFloat(lon) : null
+      lon !== undefined && lon !== '' ? parseFloat(lon) : null,
+      finalHeroImage || null
     );
 
     const stmt2 = db.prepare(`
@@ -302,5 +328,35 @@ exports.deleteQuizQuestion = (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to delete quiz question' });
+  }
+};
+
+exports.createExhibit = (req, res) => {
+  try {
+    const { id } = req.params; // museum_id
+    const { lang = 'uz' } = req.query;
+    const { title, description, image, audio } = req.body;
+    
+    const stmt = db.prepare('INSERT INTO exhibits (museum_id, lang, title, description, image, audio) VALUES (?, ?, ?, ?, ?, ?)');
+    const result = stmt.run(id, lang, title || '', description || '', image || '', audio || '');
+    
+    res.json({ success: true, id: result.lastInsertRowid });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create exhibit' });
+  }
+};
+
+exports.deleteExhibit = (req, res) => {
+  try {
+    const { exhibitId } = req.params;
+    
+    const stmt = db.prepare('DELETE FROM exhibits WHERE id = ?');
+    stmt.run(exhibitId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete exhibit' });
   }
 };

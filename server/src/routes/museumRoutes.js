@@ -10,5 +10,7 @@ router.delete('/:id', museumController.deleteMuseum);
 router.get('/:id/quiz', museumController.getMuseumQuiz);
 router.post('/:id/quizzes', museumController.createQuizQuestion);
 router.delete('/:id/quizzes/:quizId', museumController.deleteQuizQuestion);
+router.post('/:id/exhibits', museumController.createExhibit);
+router.delete('/:id/exhibits/:exhibitId', museumController.deleteExhibit);
 
 module.exports = router;
