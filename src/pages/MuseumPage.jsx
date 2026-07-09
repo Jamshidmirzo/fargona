@@ -25,7 +25,27 @@ export default function MuseumPage() {
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
 
   const museum = museums.find(m => m.id === id);
-  useEffect(() => { if (museum) markVisited(museum.id); window.scrollTo(0, 0); }, [id, museum, markVisited]);
+  const [news, setNews] = useState([]);
+  const [events, setEvents] = useState([]);
+
+  useEffect(() => {
+    if (museum) markVisited(museum.id);
+    window.scrollTo(0, 0);
+  }, [id, museum, markVisited]);
+
+  useEffect(() => {
+    const fetchNewsAndEvents = async () => {
+      try {
+        const resNews = await fetch(`${API_URL}/api/museums/${id}/news?lang=${lang}`);
+        const resEv = await fetch(`${API_URL}/api/museums/${id}/events?lang=${lang}`);
+        if (resNews.ok) setNews(await resNews.json());
+        if (resEv.ok) setEvents(await resEv.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    if (id) fetchNewsAndEvents();
+  }, [id, lang]);
 
   if (!museum) return <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)' }}>Museum not found</div>;
 
@@ -178,6 +198,61 @@ export default function MuseumPage() {
               </div>
             ))}
           </div>
+
+          {/* News Updates */}
+          {news.length > 0 && (
+            <div style={{ marginTop: 48 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 24px' }}>
+                <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
+                <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>
+                  {t.newsUpdates || 'Новости музея'}
+                </h2>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                {news.map(n => (
+                  <div key={n.id} style={{ display: 'flex', gap: 20, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 20, flexWrap: 'wrap' }}>
+                    {n.image && (
+                      <div style={{ width: '100%', maxWidth: 200, height: 130, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                        <img src={`${API_URL}${n.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                      <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 8px', color: 'var(--fg)', fontWeight: 700 }}>{n.title}</h4>
+                      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
+                        {new Date(n.created_at).toLocaleDateString(lang === 'ru' ? 'ru-RU' : lang === 'uz' ? 'uz-UZ' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </div>
+                      <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--fg)', margin: 0 }}>{n.content}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Upcoming Events */}
+          {events.length > 0 && (
+            <div style={{ marginTop: 48 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 24px' }}>
+                <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
+                <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>
+                  {t.upcomingEvents || 'События и выставки'}
+                </h2>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                {events.map(ev => (
+                  <div key={ev.id} style={{ borderLeft: '3px solid var(--accent)', paddingLeft: 20, background: 'var(--surface)', border: '1px solid var(--line)', borderLeftWidth: 4, borderLeftColor: 'var(--accent)', borderRadius: 'var(--radius)', padding: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
+                      <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 19, margin: 0, color: 'var(--fg)', fontWeight: 700 }}>{ev.title}</h4>
+                      <div style={{ background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 600 }}>
+                        {ev.date}
+                      </div>
+                    </div>
+                    <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{ev.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 80 }}>

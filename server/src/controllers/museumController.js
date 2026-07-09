@@ -425,3 +425,133 @@ exports.updateSiteTranslations = (req, res) => {
     res.status(500).json({ error: 'Failed to update site translations' });
   }
 };
+
+// News Handlers
+exports.getMuseumNews = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lang = 'uz' } = req.query;
+
+    const stmt = db.prepare(`
+      SELECT n.id, n.museum_id, n.image_url AS image, n.created_at,
+             t.title, t.content
+      FROM news n
+      LEFT JOIN news_translations t ON n.id = t.news_id AND t.lang = ?
+      WHERE n.museum_id = ?
+      ORDER BY n.created_at DESC
+    `);
+    const news = stmt.all(lang, id);
+    res.json(news);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch museum news' });
+  }
+};
+
+exports.createMuseumNews = (req, res) => {
+  try {
+    const { id } = req.params; // museum_id
+    const { lang = 'uz' } = req.query;
+    const { title, content, image } = req.body;
+
+    const insertNews = db.prepare('INSERT INTO news (museum_id, image_url) VALUES (?, ?)');
+    const insertTrans = db.prepare('INSERT INTO news_translations (news_id, lang, title, content) VALUES (?, ?, ?, ?)');
+
+    const transaction = db.transaction(() => {
+      const result = insertNews.run(id, image || null);
+      const newsId = result.lastInsertRowid;
+      
+      // Seed translations for all supported languages
+      ['uz', 'ru', 'en'].forEach(l => {
+        if (l === lang) {
+          insertTrans.run(newsId, l, title || 'New News', content || '');
+        } else {
+          insertTrans.run(newsId, l, title || 'New News', '');
+        }
+      });
+      return newsId;
+    });
+
+    const newsId = transaction();
+    res.json({ success: true, id: newsId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create news article' });
+  }
+};
+
+exports.deleteMuseumNews = (req, res) => {
+  try {
+    const { newsId } = req.params;
+    db.prepare('DELETE FROM news WHERE id = ?').run(newsId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete news article' });
+  }
+};
+
+// Events Handlers
+exports.getMuseumEvents = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { lang = 'uz' } = req.query;
+
+    const stmt = db.prepare(`
+      SELECT e.id, e.museum_id, e.image_url AS image, e.event_date AS date, e.created_at,
+             t.title, t.description
+      FROM museum_events e
+      LEFT JOIN museum_events_translations t ON e.id = t.event_id AND t.lang = ?
+      WHERE e.museum_id = ?
+      ORDER BY e.event_date ASC
+    `);
+    const events = stmt.all(lang, id);
+    res.json(events);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch museum events' });
+  }
+};
+
+exports.createMuseumEvent = (req, res) => {
+  try {
+    const { id } = req.params; // museum_id
+    const { lang = 'uz' } = req.query;
+    const { title, description, date, image } = req.body;
+
+    const insertEvent = db.prepare('INSERT INTO museum_events (museum_id, image_url, event_date) VALUES (?, ?, ?)');
+    const insertTrans = db.prepare('INSERT INTO museum_events_translations (event_id, lang, title, description) VALUES (?, ?, ?, ?)');
+
+    const transaction = db.transaction(() => {
+      const result = insertEvent.run(id, image || null, date || '');
+      const eventId = result.lastInsertRowid;
+      
+      // Seed translations for all supported languages
+      ['uz', 'ru', 'en'].forEach(l => {
+        if (l === lang) {
+          insertTrans.run(eventId, l, title || 'New Event', description || '');
+        } else {
+          insertTrans.run(eventId, l, title || 'New Event', '');
+        }
+      });
+      return eventId;
+    });
+
+    const eventId = transaction();
+    res.json({ success: true, id: eventId });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+};
+
+exports.deleteMuseumEvent = (req, res) => {
+  try {
+    const { eventId } = req.params;
+    db.prepare('DELETE FROM museum_events WHERE id = ?').run(eventId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete event' });
+  }
+};

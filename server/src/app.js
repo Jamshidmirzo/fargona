@@ -32,7 +32,10 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   res.json({ url: `/uploads/${req.file.filename}` });
 });
 
+const authRoutes = require('./routes/authRoutes');
+
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/museums', museumRoutes);
 
 // Error handling middleware

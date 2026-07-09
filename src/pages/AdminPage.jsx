@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useLang } from '../contexts/LangContext';
 import { useMuseums } from '../contexts/MuseumsContext';
+import { useAuth } from '../contexts/AuthContext';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config';
@@ -19,6 +20,7 @@ const mockTraffic = [
 export default function AdminPage() {
   const { museums, loading } = useMuseums();
   const { lang, t, refreshTranslations } = useLang();
+  const { token, user, logout } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editId, setEditId] = useState(null);
@@ -31,6 +33,15 @@ export default function AdminPage() {
   const [editingExhibitImage, setEditingExhibitImage] = useState('');
   const [siteTranslations, setSiteTranslations] = useState([]);
   const [translationsSearchQuery, setTranslationsSearchQuery] = useState('');
+
+  // News and events management state
+  const [newsList, setNewsList] = useState([]);
+  const [eventsList, setEventsList] = useState([]);
+  const [newNewsImage, setNewNewsImage] = useState('');
+  const [newEventImage, setNewEventImage] = useState('');
+
+  // Admin user management state
+  const [adminsList, setAdminsList] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -58,6 +69,48 @@ export default function AdminPage() {
     fetchStats();
     fetchTranslations();
   }, []);
+
+  // Fetch admin list (super admin only)
+  useEffect(() => {
+    if (user?.role === 'super_admin' && token) {
+      const fetchAdmins = async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/auth/admins`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAdminsList(data);
+          }
+        } catch (err) {
+          console.error('Failed to fetch admins', err);
+        }
+      };
+      fetchAdmins();
+    }
+  }, [user, token, activeTab]);
+
+  // Fetch news & events when editing a museum
+  useEffect(() => {
+    if (editId && editId !== 'new') {
+      const fetchNewsAndEvents = async () => {
+        try {
+          const resNews = await fetch(`${API_URL}/api/museums/${editId}/news?lang=${formLang}`);
+          const resEv = await fetch(`${API_URL}/api/museums/${editId}/events?lang=${formLang}`);
+          if (resNews.ok) setNewsList(await resNews.json());
+          if (resEv.ok) setEventsList(await resEv.json());
+        } catch (e) {
+          console.error(e);
+        }
+      };
+      fetchNewsAndEvents();
+    } else {
+      setNewsList([]);
+      setEventsList([]);
+    }
+    setNewNewsImage('');
+    setNewEventImage('');
+  }, [editId, formLang]);
 
   const handleImageUpload = async (e, callback) => {
     const file = e.target.files[0];
@@ -94,7 +147,10 @@ export default function AdminPage() {
         
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
       });
       
@@ -111,35 +167,43 @@ export default function AdminPage() {
 
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
 
-  const mCount = museums.length;
-  const qCount = museums.reduce((acc, m) => acc + (m[lang]?.quiz?.length || 0), 0);
+  // Filter museums based on user assignment
+  const allowedMuseums = user?.role === 'museum_admin'
+    ? museums.filter(m => user.assignedMuseums.includes(m.id))
+    : museums;
 
-  // Dynamic statistics calculations
-  const totalQuestions = quizStats.reduce((sum, s) => sum + s.total, 0);
-  const totalCorrect = quizStats.reduce((sum, s) => sum + s.score, 0);
+  const mCount = allowedMuseums.length;
+  const qCount = allowedMuseums.reduce((acc, m) => acc + (m[lang]?.quiz?.length || 0), 0);
+
+  // Filter quiz stats based on user assignment
+  const filteredQuizStats = user?.role === 'museum_admin'
+    ? quizStats.filter(s => user.assignedMuseums.includes(s.museum_id))
+    : quizStats;
+
+  const totalQuestions = filteredQuizStats.reduce((sum, s) => sum + s.total, 0);
+  const totalCorrect = filteredQuizStats.reduce((sum, s) => sum + s.score, 0);
   const avgScoreStr = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) + '%' : '82%';
 
-  const recentQuizCompletions = quizStats.slice(0, 5).map(s => {
-      const mus = museums.find(m => m.id === s.museum_id) || {};
-      const musName = (mus[lang] || mus.uz || {}).name || s.museum_id;
-      return {
-        id: s.id,
-        user: s.username,
-        action: 'completed quiz for',
-        target: musName,
-        score: `${s.score}/${s.total}`,
-        time: new Date(s.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-    });
+  const recentQuizCompletions = filteredQuizStats.slice(0, 5).map(s => {
+    const mus = allowedMuseums.find(m => m.id === s.museum_id) || {};
+    const musName = (mus[lang] || mus.uz || {}).name || s.museum_id;
+    return {
+      id: s.id,
+      user: s.username,
+      action: 'completed quiz for',
+      target: musName,
+      score: `${s.score}/${s.total}`,
+      time: new Date(s.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+  });
 
-
-  const completionsByMuseum = museums.map(m => {
-      const count = quizStats.filter(s => s.museum_id === m.id).length;
-      return {
-        name: (m[lang] || m.uz || {}).name?.split(' ')[0] || m.id,
-        completions: count
-      };
-    });
+  const completionsByMuseum = allowedMuseums.map(m => {
+    const count = filteredQuizStats.filter(s => s.museum_id === m.id).length;
+    return {
+      name: (m[lang] || m.uz || {}).name?.split(' ')[0] || m.id,
+      completions: count
+    };
+  });
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -155,6 +219,18 @@ export default function AdminPage() {
     return null;
   };
 
+  // Build the sidebar tabs dynamically depending on user role
+  const tabs = [
+    { id: 'dashboard', label: t.adminStats || 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z' },
+    { id: 'museums', label: t.adminMuseums || 'Museums', icon: 'M4 6h16M4 12h16M4 18h16' },
+    { id: 'quizzes', label: t.adminQuizzes || 'Quizzes', icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' }
+  ];
+
+  if (user?.role === 'super_admin') {
+    tabs.push({ id: 'settings', label: t.adminSettings || 'Settings', icon: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z' });
+    tabs.push({ id: 'admins', label: 'Admin Accounts', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 7a4 4 0 110-8 4 4 0 010 8zm8-4a4 4 0 110 8 4 4 0 010-8z' });
+  }
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh', borderTop: '1px solid var(--line)', background: 'var(--bg)' }}>
       {/* Sidebar */}
@@ -165,12 +241,7 @@ export default function AdminPage() {
         </div>
         
         <nav style={{ display: 'flex', flexDirection: 'column', padding: '0 16px', gap: 4 }}>
-          {[
-            { id: 'dashboard', label: t.adminStats || 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z' },
-            { id: 'museums', label: t.adminMuseums || 'Museums', icon: 'M4 6h16M4 12h16M4 18h16' },
-            { id: 'quizzes', label: t.adminQuizzes || 'Quizzes', icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
-            { id: 'settings', label: t.adminSettings || 'Settings', icon: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z' }
-          ].map(tb => (
+          {tabs.map(tb => (
             <button key={tb.id} onClick={() => { setActiveTab(tb.id); setEditId(null); }} style={{
               display: 'flex', alignItems: 'center', gap: 14,
               textAlign: 'left', background: activeTab === tb.id ? 'var(--surface)' : 'transparent',
@@ -187,9 +258,12 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        <div style={{ marginTop: 'auto', padding: '0 32px' }}>
+        <div style={{ marginTop: 'auto', padding: '0 32px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <button onClick={() => navigate('/')} style={{ background: 'transparent', border: '1px solid var(--line)', color: 'var(--muted)', width: '100%', padding: '10px', borderRadius: 99, fontSize: 13, cursor: 'pointer', transition: 'all .2s' }}>
             ← Back to Site
+          </button>
+          <button onClick={logout} style={{ background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', width: '100%', padding: '10px', borderRadius: 99, fontSize: 13, cursor: 'pointer', transition: 'all .2s' }}>
+            Sign Out
           </button>
         </div>
       </aside>
@@ -527,7 +601,10 @@ export default function AdminPage() {
                                       try {
                                         const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits/${ex.id}`, {
                                           method: 'PUT',
-                                          headers: { 'Content-Type': 'application/json' },
+                                          headers: { 
+                                            'Content-Type': 'application/json',
+                                            'Authorization': `Bearer ${token}`
+                                          },
                                           body: JSON.stringify({ title: editingExhibitTitle, description: editingExhibitDesc, image: editingExhibitImage })
                                         });
                                         if (res.ok) {
@@ -582,7 +659,10 @@ export default function AdminPage() {
                                     onClick={async () => {
                                       if (window.confirm('Delete this exhibit?')) {
                                         try {
-                                          const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits/${ex.id}`, { method: 'DELETE' });
+                                          const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits/${ex.id}`, { 
+                                            method: 'DELETE',
+                                            headers: { 'Authorization': `Bearer ${token}` }
+                                          });
                                           if (res.ok) window.location.reload();
                                           else alert('Failed to delete exhibit');
                                         } catch (e) {
@@ -643,7 +723,10 @@ export default function AdminPage() {
                         try {
                           const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits?lang=${formLang}`, {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            headers: { 
+                              'Content-Type': 'application/json',
+                              'Authorization': `Bearer ${token}`
+                            },
                             body: JSON.stringify({ title, description, image })
                           });
                           if (res.ok) {
@@ -656,6 +739,195 @@ export default function AdminPage() {
                           console.error(e);
                         }
                       }} className="btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}>Add Exhibit</button>
+                    </div>
+
+                    {/* NEWS UPDATE SECTION */}
+                    <div style={{ marginTop: 40, borderTop: '1px solid var(--line)', paddingTop: 32 }}>
+                      <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 22, margin: '0 0 20px', color: 'var(--fg)' }}>News Updates ({formLang.toUpperCase()})</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+                        {newsList.map(n => (
+                          <div key={n.id} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'var(--surface2)', padding: 16, borderRadius: 10, border: '1px solid var(--line)' }}>
+                            {n.image && (
+                              <div style={{ width: 80, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)', flexShrink: 0 }}>
+                                <img src={`${API_URL}${n.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </div>
+                            )}
+                            <div style={{ flex: 1 }}>
+                              <h5 style={{ fontSize: 15, margin: '0 0 4px', fontWeight: 600, color: 'var(--fg)' }}>{n.title}</h5>
+                              <p style={{ fontSize: 13, margin: 0, color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.content}</p>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={async () => {
+                                if (window.confirm('Delete this news article?')) {
+                                  try {
+                                    const res = await fetch(`${API_URL}/api/museums/${editId}/news/${n.id}`, { 
+                                      method: 'DELETE',
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    });
+                                    if (res.ok) {
+                                      setNewsList(prev => prev.filter(x => x.id !== n.id));
+                                    } else {
+                                      alert('Failed to delete news article');
+                                    }
+                                  } catch (e) {
+                                    console.error(e);
+                                  }
+                                }
+                              }} 
+                              style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                        {newsList.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>No news posted yet.</div>}
+                      </div>
+
+                      {/* Add News Form */}
+                      <div style={{ background: 'var(--surface2)', border: '1px dashed var(--line)', borderRadius: 10, padding: 24 }}>
+                        <h5 style={{ fontSize: 15, margin: '0 0 16px', fontWeight: 600, color: 'var(--fg)' }}>Post News Article</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Title</label>
+                            <input type="text" id="new_news_title" placeholder="News title" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14 }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>News Image</label>
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setNewNewsImage)} style={{ fontSize: 13 }} />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Content</label>
+                            <textarea id="new_news_content" rows={3} placeholder="News details..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, resize: 'vertical' }} />
+                          </div>
+                        </div>
+                        <button type="button" onClick={async () => {
+                          const title = document.getElementById('new_news_title').value;
+                          const content = document.getElementById('new_news_content').value;
+                          if (!title) return alert('Title is required');
+                          
+                          try {
+                            const res = await fetch(`${API_URL}/api/museums/${editId}/news?lang=${formLang}`, {
+                              method: 'POST',
+                              headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: JSON.stringify({ title, content, image: newNewsImage })
+                            });
+                            if (res.ok) {
+                              const saved = await res.json();
+                              setNewsList(prev => [{ id: saved.id, title, content, image: newNewsImage }, ...prev]);
+                              document.getElementById('new_news_title').value = '';
+                              document.getElementById('new_news_content').value = '';
+                              setNewNewsImage('');
+                              alert('News article posted successfully!');
+                            } else {
+                              alert('Failed to post news');
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }} className="btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}>Post News</button>
+                      </div>
+                    </div>
+
+                    {/* EVENTS SECTION */}
+                    <div style={{ marginTop: 40, borderTop: '1px solid var(--line)', paddingTop: 32 }}>
+                      <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 22, margin: '0 0 20px', color: 'var(--fg)' }}>Upcoming Events ({formLang.toUpperCase()})</h4>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+                        {eventsList.map(ev => (
+                          <div key={ev.id} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'var(--surface2)', padding: 16, borderRadius: 10, border: '1px solid var(--line)' }}>
+                            {ev.image && (
+                              <div style={{ width: 80, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)', flexShrink: 0 }}>
+                                <img src={`${API_URL}${ev.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              </div>
+                            )}
+                            <div style={{ flex: 1 }}>
+                              <h5 style={{ fontSize: 15, margin: '0 0 4px', fontWeight: 600, color: 'var(--fg)' }}>{ev.title}</h5>
+                              <p style={{ fontSize: 13, margin: '0 0 4px', color: 'var(--accent)', fontWeight: 500 }}>Date: {ev.date}</p>
+                              <p style={{ fontSize: 13, margin: 0, color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ev.description}</p>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={async () => {
+                                if (window.confirm('Delete this event?')) {
+                                  try {
+                                    const res = await fetch(`${API_URL}/api/museums/${editId}/events/${ev.id}`, { 
+                                      method: 'DELETE',
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    });
+                                    if (res.ok) {
+                                      setEventsList(prev => prev.filter(x => x.id !== ev.id));
+                                    } else {
+                                      alert('Failed to delete event');
+                                    }
+                                  } catch (e) {
+                                    console.error(e);
+                                  }
+                                }
+                              }} 
+                              style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))}
+                        {eventsList.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13 }}>No events scheduled yet.</div>}
+                      </div>
+
+                      {/* Add Event Form */}
+                      <div style={{ background: 'var(--surface2)', border: '1px dashed var(--line)', borderRadius: 10, padding: 24 }}>
+                        <h5 style={{ fontSize: 15, margin: '0 0 16px', fontWeight: 600, color: 'var(--fg)' }}>Schedule Event</h5>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Title</label>
+                            <input type="text" id="new_event_title" placeholder="Event title" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14 }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Event Date</label>
+                            <input type="date" id="new_event_date" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14 }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Event Image</label>
+                            <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setNewEventImage)} style={{ fontSize: 13 }} />
+                          </div>
+                          <div style={{ gridColumn: '1 / -1' }}>
+                            <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Description</label>
+                            <textarea id="new_event_desc" rows={3} placeholder="Event description..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, resize: 'vertical' }} />
+                          </div>
+                        </div>
+                        <button type="button" onClick={async () => {
+                          const title = document.getElementById('new_event_title').value;
+                          const description = document.getElementById('new_event_desc').value;
+                          const date = document.getElementById('new_event_date').value;
+                          if (!title || !date) return alert('Title and Date are required');
+                          
+                          try {
+                            const res = await fetch(`${API_URL}/api/museums/${editId}/events?lang=${formLang}`, {
+                              method: 'POST',
+                              headers: { 
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                              },
+                              body: JSON.stringify({ title, description, date, image: newEventImage })
+                            });
+                            if (res.ok) {
+                              const saved = await res.json();
+                              setEventsList(prev => [...prev, { id: saved.id, title, description, date, image: newEventImage }]);
+                              document.getElementById('new_event_title').value = '';
+                              document.getElementById('new_event_desc').value = '';
+                              document.getElementById('new_event_date').value = '';
+                              setNewEventImage('');
+                              alert('Event scheduled successfully!');
+                            } else {
+                              alert('Failed to schedule event');
+                            }
+                          } catch (e) {
+                            console.error(e);
+                          }
+                        }} className="btn-primary" style={{ padding: '8px 16px', fontSize: 13 }}>Schedule Event</button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -674,7 +946,7 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {museums.map(m => (
+                        {allowedMuseums.map(m => (
                         <tr key={m.id} style={{ borderBottom: '1px solid var(--line)', transition: 'background .2s' }} onMouseEnter={e => e.currentTarget.style.background = 'var(--surface2)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                           <td style={{ padding: '16px 24px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -701,44 +973,47 @@ export default function AdminPage() {
                             <button onClick={() => {
                               let parsedImgs = [];
                               try {
-                                if (m.heroImage) {
-                                  if (m.heroImage.startsWith('[')) parsedImgs = JSON.parse(m.heroImage);
-                                  else parsedImgs = [m.heroImage];
-                                }
-                              } catch (e) {
-                                parsedImgs = [m.heroImage];
-                              }
-                              setEditId(m.id);
-                              setFormLang(lang);
-                              setUploadedHeroImages(parsedImgs);
-                            }} style={{ padding: '8px 16px', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontWeight: 500, transition: 'all .2s' }}>Edit</button>
-                            <button onClick={async () => {
-                              if (window.confirm('Are you sure you want to delete this museum?')) {
-                                try {
-                                  const res = await fetch(`${API_URL}/api/museums/${m.id}`, { method: 'DELETE' });
-                                  if (res.ok) window.location.reload();
-                                  else alert('Failed to delete museum');
+                                  if (m.heroImage) {
+                                    if (m.heroImage.startsWith('[')) parsedImgs = JSON.parse(m.heroImage);
+                                    else parsedImgs = [m.heroImage];
+                                  }
                                 } catch (e) {
-                                  alert('Error deleting museum');
+                                  parsedImgs = [m.heroImage];
                                 }
-                              }
-                            }} style={{ padding: '8px 16px', fontSize: 13, background: '#D32F2F', border: '1px solid #D32F2F', borderRadius: 8, cursor: 'pointer', color: 'white', fontWeight: 500, transition: 'all .2s', marginLeft: 8 }}>Delete</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                                setEditId(m.id);
+                                setFormLang(lang);
+                                setUploadedHeroImages(parsedImgs);
+                              }} style={{ padding: '8px 16px', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontWeight: 500, transition: 'all .2s' }}>Edit</button>
+                              <button onClick={async () => {
+                                if (window.confirm('Are you sure you want to delete this museum?')) {
+                                  try {
+                                    const res = await fetch(`${API_URL}/api/museums/${m.id}`, { 
+                                      method: 'DELETE',
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    });
+                                    if (res.ok) window.location.reload();
+                                    else alert('Failed to delete museum');
+                                  } catch (e) {
+                                    alert('Error deleting museum');
+                                  }
+                                }
+                              }} style={{ padding: '8px 16px', fontSize: 13, background: '#D32F2F', border: '1px solid #D32F2F', borderRadius: 8, cursor: 'pointer', color: 'white', fontWeight: 500, transition: 'all .2s', marginLeft: 8 }}>Delete</button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
 
         {/* QUIZZES TAB */}
         {activeTab === 'quizzes' && (() => {
           // Flatten quizzes with museum context
           const allQuizzes = [];
-          museums.forEach(m => {
+          allowedMuseums.forEach(m => {
             const mData = m[lang] || m.uz || {};
             const qList = mData.quiz || [];
             qList.forEach(q => {
@@ -778,7 +1053,10 @@ export default function AdminPage() {
                               onClick={async () => {
                                 if (window.confirm('Delete this quiz question?')) {
                                   try {
-                                    const res = await fetch(`${API_URL}/api/museums/${q.museumId}/quizzes/${q.questionId}`, { method: 'DELETE' });
+                                    const res = await fetch(`${API_URL}/api/museums/${q.museumId}/quizzes/${q.questionId}`, { 
+                                      method: 'DELETE',
+                                      headers: { 'Authorization': `Bearer ${token}` }
+                                    });
                                     if (res.ok) window.location.reload();
                                     else alert('Failed to delete question');
                                   } catch (e) {
@@ -824,7 +1102,10 @@ export default function AdminPage() {
                     try {
                       const res = await fetch(`${API_URL}/api/museums/${museumId}/quizzes?lang=${lang}`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: { 
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                        },
                         body: JSON.stringify({ question, options, answer })
                       });
                       if (res.ok) {
@@ -841,7 +1122,7 @@ export default function AdminPage() {
                       <div>
                         <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Select Museum</label>
                         <select name="museumId" required style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 15, outline: 'none' }}>
-                          {museums.map(m => (
+                          {allowedMuseums.map(m => (
                             <option key={m.id} value={m.id}>{(m[lang] || m.uz || {}).name}</option>
                           ))}
                         </select>
@@ -995,7 +1276,10 @@ export default function AdminPage() {
                   try {
                     const res = await fetch(`${API_URL}/api/site-translations`, {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
                       body: JSON.stringify(siteTranslations)
                     });
                     if (res.ok) {
@@ -1014,6 +1298,123 @@ export default function AdminPage() {
               >
                 Save All Translations
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* ADMINS MANAGEMENT TAB */}
+        {activeTab === 'admins' && user?.role === 'super_admin' && (
+          <div style={{ animation: 'fhFade .3s ease both' }}>
+            <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 32, margin: '0 0 24px', color: 'var(--fg)' }}>Admin User Accounts</h1>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 32, alignItems: 'start' }}>
+              {/* ADMINS LIST */}
+              <div style={{ background: 'var(--surface)', borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', padding: 32 }}>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, margin: '0 0 20px', color: 'var(--fg)' }}>Active Admin Logins</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {adminsList.map(adm => (
+                    <div key={adm.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 20, background: 'var(--surface2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--fg)' }}>{adm.username}</div>
+                        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Role: {adm.role}</div>
+                        <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 4 }}>
+                          Managed: {adm.museums.length > 0 ? adm.museums.join(', ') : 'None'}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={async () => {
+                          if (window.confirm(`Are you sure you want to delete admin account "${adm.username}"?`)) {
+                            try {
+                              const res = await fetch(`${API_URL}/api/auth/admins/${adm.id}`, {
+                                method: 'DELETE',
+                                headers: { 'Authorization': `Bearer ${token}` }
+                              });
+                              if (res.ok) {
+                                setAdminsList(prev => prev.filter(x => x.id !== adm.id));
+                              } else {
+                                alert('Failed to delete admin');
+                              }
+                            } catch (e) {
+                              console.error(e);
+                            }
+                          }
+                        }}
+                        style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}
+                      >
+                        Delete Account
+                      </button>
+                    </div>
+                  ))}
+                  {adminsList.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 14 }}>No other admin accounts created yet.</div>}
+                </div>
+              </div>
+
+              {/* GENERATE ACCOUNT FORM */}
+              <div style={{ background: 'var(--surface)', borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', padding: 32 }}>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, margin: '0 0 20px', color: 'var(--fg)' }}>Generate Admin Login</h2>
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const formData = new FormData(e.target);
+                  const username = formData.get('username');
+                  const password = formData.get('password');
+                  const selectedMuseums = museums
+                    .filter(m => formData.get(`mus_${m.id}`) === 'on')
+                    .map(m => m.id);
+
+                  try {
+                    const res = await fetch(`${API_URL}/api/auth/admins`, {
+                      method: 'POST',
+                      headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                      },
+                      body: JSON.stringify({
+                        username,
+                        password,
+                        role: 'museum_admin',
+                        museums: selectedMuseums
+                      })
+                    });
+                    if (res.ok) {
+                      alert('Admin login generated successfully!');
+                      e.target.reset();
+                      // Refresh list
+                      const resList = await fetch(`${API_URL}/api/auth/admins`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      });
+                      if (resList.ok) setAdminsList(await resList.json());
+                    } else {
+                      const data = await res.json();
+                      alert(data.error || 'Failed to create admin');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                  }
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Username</label>
+                      <input name="username" type="text" required placeholder="e.g. uvaysi_manager" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Password</label>
+                      <input name="password" type="password" required placeholder="Enter password" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Assign Managed Museums</label>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {museums.map(m => (
+                          <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 14, color: 'var(--fg)', cursor: 'pointer' }}>
+                            <input name={`mus_${m.id}`} type="checkbox" />
+                            {(m[lang] || m.uz || {}).name}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <button type="submit" className="btn-primary" style={{ padding: 12, fontSize: 14, marginTop: 10 }}>Generate Admin</button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}

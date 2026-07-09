@@ -64,4 +64,74 @@ try {
   console.error('Failed to migrate/seed site_translations:', e);
 }
 
+// Migration: Create auth and role-based tables
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admins (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL CHECK(role IN ('super_admin', 'museum_admin'))
+    );
+    CREATE TABLE IF NOT EXISTS admin_museums (
+      admin_id INTEGER NOT NULL,
+      museum_id TEXT NOT NULL,
+      PRIMARY KEY (admin_id, museum_id),
+      FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE CASCADE,
+      FOREIGN KEY (museum_id) REFERENCES museums(id) ON DELETE CASCADE
+    );
+  `);
+  
+  // Seed default super admin if no admins exist
+  const count = db.prepare('SELECT COUNT(*) AS cnt FROM admins').get().cnt;
+  if (count === 0) {
+    const bcrypt = require('bcryptjs');
+    const defaultHash = bcrypt.hashSync('superpassword', 10);
+    db.prepare('INSERT INTO admins (username, password_hash, role) VALUES (?, ?, ?)')
+      .run('superadmin', defaultHash, 'super_admin');
+    console.log('Seeded default superadmin user.');
+  }
+} catch (e) {
+  console.error('Failed to migrate/seed auth tables:', e);
+}
+
+// Migration: Create news & events tables
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS news (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      museum_id TEXT NOT NULL,
+      image_url TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (museum_id) REFERENCES museums(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS news_translations (
+      news_id INTEGER NOT NULL,
+      lang TEXT NOT NULL,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      PRIMARY KEY (news_id, lang),
+      FOREIGN KEY (news_id) REFERENCES news(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS museum_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      museum_id TEXT NOT NULL,
+      image_url TEXT,
+      event_date TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (museum_id) REFERENCES museums(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS museum_events_translations (
+      event_id INTEGER NOT NULL,
+      lang TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      PRIMARY KEY (event_id, lang),
+      FOREIGN KEY (event_id) REFERENCES museum_events(id) ON DELETE CASCADE
+    );
+  `);
+} catch (e) {
+  console.error('Failed to migrate news & events tables:', e);
+}
+
 module.exports = db;

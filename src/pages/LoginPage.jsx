@@ -9,12 +9,14 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (login(username, password)) {
+    setError('');
+    try {
+      await login(username, password);
       navigate('/admin');
-    } else {
-      setError('Invalid credentials');
+    } catch (err) {
+      setError(err.message || 'Invalid credentials');
     }
   };
 
