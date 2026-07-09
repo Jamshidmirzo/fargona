@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback } from 'react';
+import { API_URL } from '../config';
 
 const SavedContext = createContext();
 
@@ -31,11 +32,24 @@ export function SavedProvider({ children }) {
     });
   }, []);
 
-  const saveQuizScore = useCallback((id, score) => {
+  const saveQuizScore = useCallback((id, score, total = 4) => {
     setQuizBest(prev => {
       if (prev[id] != null && prev[id] >= score) return prev;
       const next = { ...prev, [id]: score };
       writeLS('fh_best', next);
+
+      // Async report score to backend quiz-stats
+      let guestName = localStorage.getItem('fh_username');
+      if (!guestName) {
+        guestName = `Visitor_${Math.floor(100 + Math.random() * 900)}`;
+        localStorage.setItem('fh_username', guestName);
+      }
+      fetch(`${API_URL}/api/museums/quiz-stats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: guestName, museum_id: id, score, total })
+      }).catch(err => console.error('Failed to report stats', err));
+
       return next;
     });
   }, []);

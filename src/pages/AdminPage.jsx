@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLang } from '../contexts/LangContext';
 import { useMuseums } from '../contexts/MuseumsContext';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -29,6 +29,45 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editId, setEditId] = useState(null);
   const [formLang, setFormLang] = useState(lang);
+  const [uploadedHeroImage, setUploadedHeroImage] = useState('');
+  const [quizStats, setQuizStats] = useState([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/museums/quiz-stats/all`);
+        if (res.ok) {
+          const data = await res.json();
+          setQuizStats(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch quiz stats', err);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const handleImageUpload = async (e, callback) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+      const res = await fetch(`${API_URL}/api/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        callback(data.url);
+      } else {
+        alert('Failed to upload image');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error uploading image');
+    }
+  };
   
   const handleSave = async (e) => {
     e.preventDefault();
@@ -63,10 +102,40 @@ export default function AdminPage() {
   const mCount = museums.length;
   const qCount = museums.reduce((acc, m) => acc + (m[lang]?.quiz?.length || 0), 0);
 
+  // Dynamic statistics calculations
+  const totalQuestions = quizStats.reduce((sum, s) => sum + s.total, 0);
+  const totalCorrect = quizStats.reduce((sum, s) => sum + s.score, 0);
+  const avgScoreStr = totalQuestions ? Math.round((totalCorrect / totalQuestions) * 100) + '%' : '82%';
+
+  const recentQuizCompletions = quizStats.length > 0
+    ? quizStats.slice(0, 5).map(s => {
+        const mus = museums.find(m => m.id === s.museum_id) || {};
+        const musName = (mus[lang] || mus.uz || {}).name || s.museum_id;
+        return {
+          id: s.id,
+          user: s.username,
+          action: 'completed quiz for',
+          target: musName,
+          score: `${s.score}/${s.total}`,
+          time: new Date(s.completed_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+      })
+    : mockActivity;
+
   const mockQuizData = museums.map(m => ({
     name: (m[lang] || m.uz || m.ru || m.en || m).name?.split(' ')[0] || 'Unknown', // short name
     completions: Math.floor(Math.random() * 400) + 100
   }));
+
+  const completionsByMuseum = quizStats.length > 0
+    ? museums.map(m => {
+        const count = quizStats.filter(s => s.museum_id === m.id).length;
+        return {
+          name: (m[lang] || m.uz || {}).name?.split(' ')[0] || m.id,
+          completions: count
+        };
+      })
+    : mockQuizData;
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -140,7 +209,7 @@ export default function AdminPage() {
               {[
                 { label: 'Total Museum Views', value: '11,850', trend: '+14%', color: 'var(--accent)' },
                 { label: 'Active Users (7d)', value: '3,240', trend: '+5%', color: 'var(--fg)' },
-                { label: 'Avg. Quiz Score', value: '82%', trend: '+2%', color: '#2E7D32' }
+                { label: 'Avg. Quiz Score', value: avgScoreStr, trend: '+2%', color: '#2E7D32' }
               ].map((m, i) => (
                 <div key={i} style={{ padding: 28, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: m.color }} />
@@ -176,7 +245,7 @@ export default function AdminPage() {
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', padding: 32, display: 'flex', flexDirection: 'column' }}>
                 <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 24px', color: 'var(--fg)' }}>Recent Activity</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
-                  {mockActivity.map(act => (
+                  {recentQuizCompletions.map(act => (
                     <div key={act.id} style={{ display: 'flex', gap: 14 }}>
                       <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, color: 'var(--fg)', flexShrink: 0, border: '1px solid var(--line)' }}>
                         {act.user.charAt(0)}
@@ -203,13 +272,13 @@ export default function AdminPage() {
                 <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 24px', color: 'var(--fg)' }}>Quiz Completions by Museum</h3>
                 <div style={{ width: '100%', height: 260 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={mockQuizData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                    <BarChart data={completionsByMuseum} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
                       <XAxis dataKey="name" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                       <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
                       <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: 'var(--surface2)', opacity: 0.5 }} />
                       <Bar dataKey="completions" name="Completions" radius={[6, 6, 0, 0]}>
-                        {mockQuizData.map((entry, index) => (
+                        {completionsByMuseum.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={index % 2 === 0 ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 50%, var(--bg))'} />
                         ))}
                       </Bar>

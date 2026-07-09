@@ -360,3 +360,26 @@ exports.deleteExhibit = (req, res) => {
     res.status(500).json({ error: 'Failed to delete exhibit' });
   }
 };
+
+exports.createQuizStat = (req, res) => {
+  try {
+    const { username, museum_id, score, total } = req.body;
+    const stmt = db.prepare('INSERT INTO quiz_stats (username, museum_id, score, total) VALUES (?, ?, ?, ?)');
+    stmt.run(username || 'Guest', museum_id, parseInt(score, 10) || 0, parseInt(total, 10) || 0);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to save quiz stat' });
+  }
+};
+
+exports.getQuizStats = (req, res) => {
+  try {
+    const stmt = db.prepare('SELECT id, username, museum_id, score, total, completed_at FROM quiz_stats ORDER BY completed_at DESC LIMIT 50');
+    const stats = stmt.all();
+    res.json(stats);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch quiz stats' });
+  }
+};

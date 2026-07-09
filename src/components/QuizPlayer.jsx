@@ -28,7 +28,7 @@ export default function QuizPlayer({ museum, onBack }) {
     if (!canNext) return;
     if (isLast) {
       const sc = answers.reduce((s, a, idx) => s + (quiz[idx] && a === quiz[idx].a ? 1 : 0), 0);
-      saveQuizScore(museum.id, sc);
+      saveQuizScore(museum.id, sc, quiz.length);
       setDone(true);
     } else {
       setQi(qi + 1);

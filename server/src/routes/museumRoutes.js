@@ -4,6 +4,8 @@ const museumController = require('../controllers/museumController');
 
 router.get('/', museumController.getAllMuseums);
 router.post('/', museumController.createMuseum);
+router.post('/quiz-stats', museumController.createQuizStat);
+router.get('/quiz-stats/all', museumController.getQuizStats);
 router.get('/:id', museumController.getMuseumById);
 router.put('/:id', museumController.updateMuseum);
 router.delete('/:id', museumController.deleteMuseum);

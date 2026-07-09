@@ -19,4 +19,20 @@ try {
   // Column already exists
 }
 
+// Migration: Create quiz_stats table
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS quiz_stats (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      username TEXT NOT NULL,
+      museum_id TEXT NOT NULL,
+      score INTEGER NOT NULL,
+      total INTEGER NOT NULL,
+      completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+} catch (e) {
+  // Already exists
+}
+
 module.exports = db;
