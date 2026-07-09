@@ -398,3 +398,30 @@ exports.getQuizStats = (req, res) => {
     res.status(500).json({ error: 'Failed to fetch quiz stats' });
   }
 };
+
+exports.getSiteTranslations = (req, res) => {
+  try {
+    const rows = db.prepare('SELECT key, uz, ru, en FROM site_translations').all();
+    res.json(rows);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch site translations' });
+  }
+};
+
+exports.updateSiteTranslations = (req, res) => {
+  try {
+    const updates = req.body;
+    const stmt = db.prepare('UPDATE site_translations SET uz = ?, ru = ?, en = ? WHERE key = ?');
+    const transaction = db.transaction((items) => {
+      for (const item of items) {
+        stmt.run(item.uz, item.ru, item.en, item.key);
+      }
+    });
+    transaction(updates);
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update site translations' });
+  }
+};

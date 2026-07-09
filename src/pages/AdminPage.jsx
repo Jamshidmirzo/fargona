@@ -24,7 +24,7 @@ const mockActivity = [
 
 export default function AdminPage() {
   const { museums, loading } = useMuseums();
-  const { lang, t } = useLang();
+  const { lang, t, refreshTranslations } = useLang();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editId, setEditId] = useState(null);
@@ -35,6 +35,8 @@ export default function AdminPage() {
   const [editingExhibitTitle, setEditingExhibitTitle] = useState('');
   const [editingExhibitDesc, setEditingExhibitDesc] = useState('');
   const [editingExhibitImage, setEditingExhibitImage] = useState('');
+  const [siteTranslations, setSiteTranslations] = useState([]);
+  const [translationsSearchQuery, setTranslationsSearchQuery] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -48,7 +50,19 @@ export default function AdminPage() {
         console.error('Failed to fetch quiz stats', err);
       }
     };
+    const fetchTranslations = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/site-translations`);
+        if (res.ok) {
+          const data = await res.json();
+          setSiteTranslations(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch site translations', err);
+      }
+    };
     fetchStats();
+    fetchTranslations();
   }, []);
 
   const handleImageUpload = async (e, callback) => {
@@ -166,10 +180,10 @@ export default function AdminPage() {
         
         <nav style={{ display: 'flex', flexDirection: 'column', padding: '0 16px', gap: 4 }}>
           {[
-            { id: 'dashboard', label: 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z' },
-            { id: 'museums', label: 'Museums Data', icon: 'M4 6h16M4 12h16M4 18h16' },
-            { id: 'quizzes', label: 'Quizzes & Stats', icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
-            { id: 'settings', label: 'Settings', icon: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z' }
+            { id: 'dashboard', label: t.adminStats || 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z' },
+            { id: 'museums', label: t.adminMuseums || 'Museums', icon: 'M4 6h16M4 12h16M4 18h16' },
+            { id: 'quizzes', label: t.adminQuizzes || 'Quizzes', icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
+            { id: 'settings', label: t.adminSettings || 'Settings', icon: 'M12 15a3 3 0 100-6 3 3 0 000 6z M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z' }
           ].map(tb => (
             <button key={tb.id} onClick={() => { setActiveTab(tb.id); setEditId(null); }} style={{
               display: 'flex', alignItems: 'center', gap: 14,
@@ -884,12 +898,137 @@ export default function AdminPage() {
 
         {/* SETTINGS TAB */}
         {activeTab === 'settings' && (
-          <div style={{ animation: 'fhFade .3s ease both', color: 'var(--muted)', padding: '80px 40px', textAlign: 'center', border: '1px dashed var(--line)', borderRadius: 'calc(var(--radius) * 1.5)' }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>🚧</div>
-            <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, color: 'var(--fg)', margin: '0 0 12px' }}>Under Construction</h2>
-            <p style={{ margin: 0, fontSize: 15, maxWidth: 400, marginInline: 'auto', lineHeight: 1.5 }}>
-              The <strong>settings</strong> module is currently in development. Configuration will be available soon.
-            </p>
+          <div style={{ animation: 'fhFade .3s ease both' }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+              <div>
+                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 32, margin: '0 0 6px', color: 'var(--fg)' }}>Site Translations Settings</h1>
+                <p style={{ margin: 0, color: 'var(--muted)', fontSize: 14.5 }}>Manage static localization words of the main website interface.</p>
+              </div>
+              <button 
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_URL}/api/site-translations`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(siteTranslations)
+                    });
+                    if (res.ok) {
+                      refreshTranslations();
+                      alert('Translations saved successfully!');
+                    } else {
+                      alert('Failed to save translations');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert('Error saving translations');
+                  }
+                }}
+                className="btn-primary" 
+                style={{ padding: '12px 24px', fontSize: 14 }}
+              >
+                Save All Translations
+              </button>
+            </header>
+
+            {/* Search filter bar */}
+            <div style={{ marginBottom: 24 }}>
+              <input 
+                type="text" 
+                placeholder="Search localization keys or translation text..." 
+                value={translationsSearchQuery}
+                onChange={(e) => setTranslationsSearchQuery(e.target.value)}
+                style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+              {(() => {
+                const filtered = siteTranslations.filter(item => 
+                  item.key.toLowerCase().includes(translationsSearchQuery.toLowerCase()) ||
+                  item.uz.toLowerCase().includes(translationsSearchQuery.toLowerCase()) ||
+                  item.ru.toLowerCase().includes(translationsSearchQuery.toLowerCase()) ||
+                  item.en.toLowerCase().includes(translationsSearchQuery.toLowerCase())
+                );
+                
+                if (filtered.length === 0) {
+                  return <div style={{ textAlign: 'center', color: 'var(--muted)', padding: '40px 0' }}>No matching translation words found.</div>;
+                }
+
+                return filtered.map(item => (
+                  <div key={item.key} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.2)', padding: 24, display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--line)', paddingBottom: 10 }}>
+                      <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, color: 'var(--accent)', fontSize: 14, letterSpacing: '.05em' }}>{item.key}</span>
+                      <span style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase' }}>UI Translation Key</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>UZ</label>
+                        <input 
+                          type="text" 
+                          value={item.uz} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSiteTranslations(prev => prev.map(o => o.key === item.key ? { ...o, uz: val } : o));
+                          }}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14 }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>RU</label>
+                        <input 
+                          type="text" 
+                          value={item.ru} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSiteTranslations(prev => prev.map(o => o.key === item.key ? { ...o, ru: val } : o));
+                          }}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14 }} 
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>EN</label>
+                        <input 
+                          type="text" 
+                          value={item.en} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setSiteTranslations(prev => prev.map(o => o.key === item.key ? { ...o, en: val } : o));
+                          }}
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14 }} 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            
+            <div style={{ marginTop: 32, display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_URL}/api/site-translations`, {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(siteTranslations)
+                    });
+                    if (res.ok) {
+                      refreshTranslations();
+                      alert('Translations saved successfully!');
+                    } else {
+                      alert('Failed to save translations');
+                    }
+                  } catch (err) {
+                    console.error(err);
+                    alert('Error saving translations');
+                  }
+                }}
+                className="btn-primary" 
+                style={{ padding: '14px 28px', fontSize: 15 }}
+              >
+                Save All Translations
+              </button>
+            </div>
           </div>
         )}
       </main>

@@ -1,0 +1,782 @@
+[
+  {
+    "key": "siteName",
+    "ru": "Дом-музеи Ферганы",
+    "uz": "Farg'ona uy-muzeylari",
+    "en": "Fergana House-Museums"
+  },
+  {
+    "key": "siteSub",
+    "ru": "Шесть поэтов · шесть домов · одна долина",
+    "uz": "Olti shoir · olti uy · bitta vodiy",
+    "en": "Six poets · six houses · one valley"
+  },
+  {
+    "key": "nav.home",
+    "ru": "Музеи",
+    "uz": "Muzeylar",
+    "en": "Museums"
+  },
+  {
+    "key": "nav.map",
+    "ru": "Карта",
+    "uz": "Xarita",
+    "en": "Map"
+  },
+  {
+    "key": "nav.timeline",
+    "ru": "Хронология",
+    "uz": "Xronologiya",
+    "en": "Timeline"
+  },
+  {
+    "key": "nav.route",
+    "ru": "Маршрут",
+    "uz": "Marshrut",
+    "en": "Route"
+  },
+  {
+    "key": "nav.saved",
+    "ru": "Сохранённые",
+    "uz": "Saqlangan",
+    "en": "Saved"
+  },
+  {
+    "key": "nav.passport",
+    "ru": "Паспорт",
+    "uz": "Pasport",
+    "en": "Passport"
+  },
+  {
+    "key": "nav.admin",
+    "ru": "Админ",
+    "uz": "Admin",
+    "en": "Admin"
+  },
+  {
+    "key": "heroTitle",
+    "ru": "Дом-музеи Ферганской долины",
+    "uz": "Farg'ona vodiysi uy-muzeylari",
+    "en": "House-Museums of the Fergana Valley"
+  },
+  {
+    "key": "heroText",
+    "ru": "Шесть домов, где жили поэты, ставшие голосом своего народа. Читайте их истории, проверьте себя в викторине и постройте свой маршрут по долине.",
+    "uz": "Xalq ovoziga aylangan shoirlar yashagan olti uy. Ularning taqdirini o'qing, viktorinada o'zingizni sinang va vodiy bo'ylab marshrutingizni tuzing.",
+    "en": "Six houses where poets lived who became the voice of their people. Read their stories, test yourself in the quiz, and build your own route across the valley."
+  },
+  {
+    "key": "explore",
+    "ru": "Смотреть музеи",
+    "uz": "Muzeylarni ko'rish",
+    "en": "Explore museums"
+  },
+  {
+    "key": "buildRoute",
+    "ru": "Построить маршрут",
+    "uz": "Marshrut tuzish",
+    "en": "Build a route"
+  },
+  {
+    "key": "museumsCount",
+    "ru": "музеев",
+    "uz": "muzey",
+    "en": "museums"
+  },
+  {
+    "key": "born",
+    "ru": "Годы жизни",
+    "uz": "Yashagan yillari",
+    "en": "Lifespan"
+  },
+  {
+    "key": "city",
+    "ru": "Город",
+    "uz": "Shahar",
+    "en": "City"
+  },
+  {
+    "key": "established",
+    "ru": "Музей открыт",
+    "uz": "Muzey ochilgan",
+    "en": "Museum opened"
+  },
+  {
+    "key": "readMore",
+    "ru": "Подробнее",
+    "uz": "Batafsil",
+    "en": "Read more"
+  },
+  {
+    "key": "biography",
+    "ru": "Биография",
+    "uz": "Tarjimai hol",
+    "en": "Biography"
+  },
+  {
+    "key": "timelineOfLife",
+    "ru": "Хронология жизни",
+    "uz": "Hayot xronologiyasi",
+    "en": "Life timeline"
+  },
+  {
+    "key": "museumInfo",
+    "ru": "О музее",
+    "uz": "Muzey haqida",
+    "en": "About the museum"
+  },
+  {
+    "key": "address",
+    "ru": "Адрес",
+    "uz": "Manzil",
+    "en": "Address"
+  },
+  {
+    "key": "hours",
+    "ru": "Часы работы",
+    "uz": "Ish vaqti",
+    "en": "Hours"
+  },
+  {
+    "key": "entry",
+    "ru": "Билеты",
+    "uz": "Chiptalar",
+    "en": "Tickets"
+  },
+  {
+    "key": "phone",
+    "ru": "Телефон",
+    "uz": "Telefon",
+    "en": "Phone"
+  },
+  {
+    "key": "founded",
+    "ru": "Основан",
+    "uz": "Asos solingan",
+    "en": "Founded"
+  },
+  {
+    "key": "takeQuiz",
+    "ru": "Пройти викторину",
+    "uz": "Viktorinani boshlash",
+    "en": "Take the quiz"
+  },
+  {
+    "key": "save",
+    "ru": "Сохранить",
+    "uz": "Saqlash",
+    "en": "Save"
+  },
+  {
+    "key": "saved",
+    "ru": "Сохранено",
+    "uz": "Saqlangan",
+    "en": "Saved"
+  },
+  {
+    "key": "remove",
+    "ru": "Убрать",
+    "uz": "Olib tashlash",
+    "en": "Remove"
+  },
+  {
+    "key": "backToList",
+    "ru": "← Все музеи",
+    "uz": "← Barcha muzeylar",
+    "en": "← All museums"
+  },
+  {
+    "key": "nearest",
+    "ru": "Ближайший музей",
+    "uz": "Eng yaqin muzey",
+    "en": "Nearest museum"
+  },
+  {
+    "key": "distance",
+    "ru": "Расстояние",
+    "uz": "Masofa",
+    "en": "Distance"
+  },
+  {
+    "key": "km",
+    "ru": "км",
+    "uz": "km",
+    "en": "km"
+  },
+  {
+    "key": "estTime",
+    "ru": "Время в пути (на авто)",
+    "uz": "Yo'l vaqti (avtoda)",
+    "en": "Driving time"
+  },
+  {
+    "key": "hr",
+    "ru": "ч",
+    "uz": "s",
+    "en": "h"
+  },
+  {
+    "key": "min",
+    "ru": "мин",
+    "uz": "daq",
+    "en": "min"
+  },
+  {
+    "key": "quizTitle",
+    "ru": "Викторина",
+    "uz": "Viktorina",
+    "en": "Quiz"
+  },
+  {
+    "key": "quizIntro",
+    "ru": "Проверьте, что вы запомнили. Анонимно, без регистрации — просто для себя.",
+    "uz": "Nimani eslab qolganingizni tekshiring. Anonim, ro'yxatdan o'tmasdan — faqat o'zingiz uchun.",
+    "en": "See what you remember. Anonymous, no sign-up — just for yourself."
+  },
+  {
+    "key": "question",
+    "ru": "Вопрос",
+    "uz": "Savol",
+    "en": "Question"
+  },
+  {
+    "key": "of",
+    "ru": "из",
+    "uz": "/",
+    "en": "of"
+  },
+  {
+    "key": "next",
+    "ru": "Далее",
+    "uz": "Keyingi",
+    "en": "Next"
+  },
+  {
+    "key": "finish",
+    "ru": "Завершить",
+    "uz": "Yakunlash",
+    "en": "Finish"
+  },
+  {
+    "key": "yourResult",
+    "ru": "Ваш результат",
+    "uz": "Sizning natijangiz",
+    "en": "Your result"
+  },
+  {
+    "key": "correct",
+    "ru": "правильных",
+    "uz": "to'g'ri",
+    "en": "correct"
+  },
+  {
+    "key": "retry",
+    "ru": "Пройти заново",
+    "uz": "Qaytadan",
+    "en": "Try again"
+  },
+  {
+    "key": "backToMuseum",
+    "ru": "← Вернуться к музею",
+    "uz": "← Muzeyga qaytish",
+    "en": "← Back to the museum"
+  },
+  {
+    "key": "resultGreat",
+    "ru": "Прекрасно! Вы настоящий знаток.",
+    "uz": "Ajoyib! Siz haqiqiy bilimdonsiz.",
+    "en": "Excellent! You're a true expert."
+  },
+  {
+    "key": "resultGood",
+    "ru": "Хорошо! Вы многое запомнили.",
+    "uz": "Yaxshi! Ko'p narsani eslab qolibsiz.",
+    "en": "Good! You remembered a lot."
+  },
+  {
+    "key": "resultSoso",
+    "ru": "Неплохо — стоит перечитать историю.",
+    "uz": "Yomon emas — tarixni qayta o'qing.",
+    "en": "Not bad — worth re-reading the story."
+  },
+  {
+    "key": "resultLow",
+    "ru": "Попробуйте ещё раз после прочтения.",
+    "uz": "O'qib chiqib, yana urinib ko'ring.",
+    "en": "Read up and give it another go."
+  },
+  {
+    "key": "mapTitle",
+    "ru": "Карта долины",
+    "uz": "Vodiy xaritasi",
+    "en": "Valley map"
+  },
+  {
+    "key": "mapText",
+    "ru": "Нажмите на метку, чтобы узнать о музее и расстоянии до ближайшего.",
+    "uz": "Muzey va eng yaqinigacha masofani bilish uchun belgini bosing.",
+    "en": "Tap a pin to learn about the museum and the distance to the nearest one."
+  },
+  {
+    "key": "timelineTitle",
+    "ru": "Хронология: кто раньше",
+    "uz": "Xronologiya: kim avvalroq",
+    "en": "Timeline: who came first"
+  },
+  {
+    "key": "timelineText",
+    "ru": "Шесть судеб в порядке эпох — от классиков ханства до современного классика.",
+    "uz": "Olti taqdir davrlar tartibida — xonlik klassiklaridan zamonaviy klassikkacha.",
+    "en": "Six lives in order of their era — from the classics of the khanate to a modern classic."
+  },
+  {
+    "key": "routeTitle",
+    "ru": "Туристический маршрут",
+    "uz": "Turistik marshrut",
+    "en": "Tourist route"
+  },
+  {
+    "key": "routeText",
+    "ru": "Оптимальный порядок посещения всех шести домов — от Коканда через Маргилан до Ферганы.",
+    "uz": "Oltita uyni ko'rishning maqbul tartibi — Qo'qondan Marg'ilon orqali Farg'onagacha.",
+    "en": "The best order to visit all six houses — from Kokand through Margilan to Fergana."
+  },
+  {
+    "key": "stop",
+    "ru": "Остановка",
+    "uz": "To'xtash",
+    "en": "Stop"
+  },
+  {
+    "key": "byFoot",
+    "ru": "пешком",
+    "uz": "piyoda",
+    "en": "on foot"
+  },
+  {
+    "key": "byCar",
+    "ru": "на машине",
+    "uz": "mashinada",
+    "en": "by car"
+  },
+  {
+    "key": "travelTime",
+    "ru": "в пути",
+    "uz": "yo'lda",
+    "en": "travel"
+  },
+  {
+    "key": "totalRoute",
+    "ru": "Весь маршрут",
+    "uz": "Butun marshrut",
+    "en": "Whole route"
+  },
+  {
+    "key": "totalDistance",
+    "ru": "Общее расстояние",
+    "uz": "Umumiy masofa",
+    "en": "Total distance"
+  },
+  {
+    "key": "totalTime",
+    "ru": "Время в дороге",
+    "uz": "Yo'l vaqti",
+    "en": "Travel time"
+  },
+  {
+    "key": "hour",
+    "ru": "ч",
+    "uz": "soat",
+    "en": "h"
+  },
+  {
+    "key": "savedTitle",
+    "ru": "Сохранённые музеи",
+    "uz": "Saqlangan muzeylar",
+    "en": "Saved museums"
+  },
+  {
+    "key": "savedEmpty",
+    "ru": "Пока ничего не сохранено. Нажмите «Сохранить» на карточке музея.",
+    "uz": "Hozircha hech narsa saqlanmagan. Muzey kartasida «Saqlash»ni bosing.",
+    "en": "Nothing saved yet. Tap 'Save' on a museum card."
+  },
+  {
+    "key": "openMap",
+    "ru": "Открыть на карте",
+    "uz": "Xaritada ochish",
+    "en": "Open on map"
+  },
+  {
+    "key": "startHere",
+    "ru": "Отсюда начинается маршрут",
+    "uz": "Marshrut shu yerdan boshlanadi",
+    "en": "The route starts here"
+  },
+  {
+    "key": "theme",
+    "ru": "Стиль",
+    "uz": "Uslub",
+    "en": "Style"
+  },
+  {
+    "key": "mode",
+    "ru": "Тема",
+    "uz": "Rejim",
+    "en": "Mode"
+  },
+  {
+    "key": "lang",
+    "ru": "Язык",
+    "uz": "Til",
+    "en": "Language"
+  },
+  {
+    "key": "light",
+    "ru": "Светлая",
+    "uz": "Yorug'",
+    "en": "Light"
+  },
+  {
+    "key": "dark",
+    "ru": "Тёмная",
+    "uz": "Qorong'u",
+    "en": "Dark"
+  },
+  {
+    "key": "photoHere",
+    "ru": "здесь будет фото",
+    "uz": "bu yerda foto bo'ladi",
+    "en": "photo goes here"
+  },
+  {
+    "key": "portraitHere",
+    "ru": "портрет",
+    "uz": "portret",
+    "en": "portrait"
+  },
+  {
+    "key": "passportTitle",
+    "ru": "Музейный паспорт",
+    "uz": "Muzey pasporti",
+    "en": "Museum passport"
+  },
+  {
+    "key": "passportText",
+    "ru": "Посещайте музеи и проходите викторины — собирайте печати. Всё анонимно и хранится только на вашем устройстве.",
+    "uz": "Muzeylarga tashrif buyuring va viktorinalarni yeching — muhrlar to'plang. Hammasi anonim va faqat qurilmangizda saqlanadi.",
+    "en": "Visit museums and take quizzes to collect stamps. Everything is anonymous and stored only on your device."
+  },
+  {
+    "key": "visited",
+    "ru": "Посещён",
+    "uz": "Tashrif etilgan",
+    "en": "Visited"
+  },
+  {
+    "key": "notVisited",
+    "ru": "Не посещён",
+    "uz": "Tashrif etilmagan",
+    "en": "Not visited"
+  },
+  {
+    "key": "bestScore",
+    "ru": "Лучший результат",
+    "uz": "Eng yaxshi natija",
+    "en": "Best score"
+  },
+  {
+    "key": "collectAll",
+    "ru": "Соберите все 6 печатей",
+    "uz": "Oltita muhrni yig'ing",
+    "en": "Collect all 6 stamps"
+  },
+  {
+    "key": "stampsCollected",
+    "ru": "Печатей собрано",
+    "uz": "Muhrlar yig'ilgan",
+    "en": "Stamps collected"
+  },
+  {
+    "key": "quizzesPassed",
+    "ru": "Викторин пройдено",
+    "uz": "Viktorinalar yechilgan",
+    "en": "Quizzes passed"
+  },
+  {
+    "key": "passportComplete",
+    "ru": "Паспорт заполнен — вы прошли всю долину!",
+    "uz": "Pasport toʻldirildi — siz butun vodiyni aylandingiz!",
+    "en": "Passport complete — you have traversed the valley!"
+  },
+  {
+    "key": "visitMuseum",
+    "ru": "Открыть музей",
+    "uz": "Muzeyni ochish",
+    "en": "Open museum"
+  },
+  {
+    "key": "resetProgress",
+    "ru": "Сбросить прогресс",
+    "uz": "Jarayonni tozalash",
+    "en": "Reset progress"
+  },
+  {
+    "key": "exposition",
+    "ru": "Экспозиция",
+    "uz": "Ekspozitsiya",
+    "en": "Exhibition"
+  },
+  {
+    "key": "enterVisit",
+    "ru": "Войти в экспозицию",
+    "uz": "Ekspozitsiyaga kirish",
+    "en": "Enter the exhibition"
+  },
+  {
+    "key": "hall",
+    "ru": "Зал",
+    "uz": "Zal",
+    "en": "Hall"
+  },
+  {
+    "key": "nextHall",
+    "ru": "Следующий зал",
+    "uz": "Keyingi zal",
+    "en": "Next hall"
+  },
+  {
+    "key": "prevHall",
+    "ru": "Назад",
+    "uz": "Orqaga",
+    "en": "Back"
+  },
+  {
+    "key": "finishVisit",
+    "ru": "Завершить визит",
+    "uz": "Sayohatni yakunlash",
+    "en": "Finish the visit"
+  },
+  {
+    "key": "halls.0.title",
+    "ru": "Дом и жизнь",
+    "uz": "Uy va hayot",
+    "en": "Home and Life"
+  },
+  {
+    "key": "halls.0.subtitle",
+    "ru": "Где всё начиналось",
+    "uz": "Hammasi qanday boshlangan",
+    "en": "Where it all began"
+  },
+  {
+    "key": "halls.0.exhibits.0",
+    "ru": "Портрет",
+    "uz": "Portret",
+    "en": "Portrait"
+  },
+  {
+    "key": "halls.0.exhibits.1",
+    "ru": "Личные вещи",
+    "uz": "Shaxsiy buyumlar",
+    "en": "Personal belongings"
+  },
+  {
+    "key": "halls.0.exhibits.2",
+    "ru": "Двор и мехмонхона",
+    "uz": "Hovli va mehmonxona",
+    "en": "Courtyard and mehmonkhona"
+  },
+  {
+    "key": "halls.1.title",
+    "ru": "Кабинет и творчество",
+    "uz": "Ijod xonasi",
+    "en": "Study and Work"
+  },
+  {
+    "key": "halls.1.subtitle",
+    "ru": "Рукописи и произведения",
+    "uz": "Qo'lyozma va asarlar",
+    "en": "Manuscripts and works"
+  },
+  {
+    "key": "halls.1.exhibits.0",
+    "ru": "Рукописи",
+    "uz": "Qo'lyozmalar",
+    "en": "Manuscripts"
+  },
+  {
+    "key": "halls.1.exhibits.1",
+    "ru": "Первые издания",
+    "uz": "Ilk nashrlar",
+    "en": "First editions"
+  },
+  {
+    "key": "halls.1.exhibits.2",
+    "ru": "Перо и калам",
+    "uz": "Qalam va siyoh",
+    "en": "Pen and ink"
+  },
+  {
+    "key": "halls.2.title",
+    "ru": "Наследие и память",
+    "uz": "Meros va xotira",
+    "en": "Legacy and Memory"
+  },
+  {
+    "key": "halls.2.subtitle",
+    "ru": "Имя, живущее сегодня",
+    "uz": "Bugun ham barhayot nom",
+    "en": "A name living today"
+  },
+  {
+    "key": "halls.2.exhibits.0",
+    "ru": "Современные издания",
+    "uz": "Zamonaviy nashrlar",
+    "en": "Modern editions"
+  },
+  {
+    "key": "halls.2.exhibits.1",
+    "ru": "Фотоархив",
+    "uz": "Fotoarxiv",
+    "en": "Photo archive"
+  },
+  {
+    "key": "halls.2.exhibits.2",
+    "ru": "Памятные дары",
+    "uz": "Xotira sovg'alari",
+    "en": "Memorial gifts"
+  },
+  {
+    "key": "adminTitle",
+    "ru": "Панель управления",
+    "uz": "Boshqaruv paneli",
+    "en": "Admin Panel"
+  },
+  {
+    "key": "adminMuseums",
+    "ru": "Музеи",
+    "uz": "Muzeylar",
+    "en": "Museums"
+  },
+  {
+    "key": "adminQuizzes",
+    "ru": "Викторины",
+    "uz": "Viktorinalar",
+    "en": "Quizzes"
+  },
+  {
+    "key": "adminStats",
+    "ru": "Статистика",
+    "uz": "Statistika",
+    "en": "Statistics"
+  },
+  {
+    "key": "adminSettings",
+    "ru": "Настройки",
+    "uz": "Sozlamalar",
+    "en": "Settings"
+  },
+  {
+    "key": "addMuseum",
+    "ru": "Добавить музей",
+    "uz": "Muzey qo'shish",
+    "en": "Add museum"
+  },
+  {
+    "key": "editMuseum",
+    "ru": "Редактировать",
+    "uz": "Tahrirlash",
+    "en": "Edit"
+  },
+  {
+    "key": "deleteMuseum",
+    "ru": "Удалить",
+    "uz": "O'chirish",
+    "en": "Delete"
+  },
+  {
+    "key": "confirmDelete",
+    "ru": "Удалить безвозвратно?",
+    "uz": "Butunlay o'chirilsinmi?",
+    "en": "Delete permanently?"
+  },
+  {
+    "key": "cancel",
+    "ru": "Отмена",
+    "uz": "Bekor qilish",
+    "en": "Cancel"
+  },
+  {
+    "key": "saveChanges",
+    "ru": "Сохранить",
+    "uz": "Saqlash",
+    "en": "Save"
+  },
+  {
+    "key": "noData",
+    "ru": "Нет данных",
+    "uz": "Ma'lumot yo'q",
+    "en": "No data"
+  },
+  {
+    "key": "filterAll",
+    "ru": "Все",
+    "uz": "Barchasi",
+    "en": "All"
+  },
+  {
+    "key": "filterByCity",
+    "ru": "По городу",
+    "uz": "Shahar bo'yicha",
+    "en": "By city"
+  },
+  {
+    "key": "sortByName",
+    "ru": "По имени",
+    "uz": "Ism bo'yicha",
+    "en": "By name"
+  },
+  {
+    "key": "sortByYear",
+    "ru": "По году",
+    "uz": "Yil bo'yicha",
+    "en": "By year"
+  },
+  {
+    "key": "shareRoute",
+    "ru": "Поделиться",
+    "uz": "Ulashish",
+    "en": "Share"
+  },
+  {
+    "key": "downloadPDF",
+    "ru": "Скачать PDF",
+    "uz": "PDF yuklab olish",
+    "en": "Download PDF"
+  },
+  {
+    "key": "printRoute",
+    "ru": "Печать",
+    "uz": "Chop etish",
+    "en": "Print"
+  },
+  {
+    "key": "rooms",
+    "ru": "Залы",
+    "uz": "Xonalar",
+    "en": "Rooms"
+  },
+  {
+    "key": "totalArea",
+    "ru": "Общая площадь",
+    "uz": "Umumiy maydon",
+    "en": "Total area"
+  },
+  {
+    "key": "exhibitArea",
+    "ru": "Выставочная площадь",
+    "uz": "Ko'rgazma maydoni",
+    "en": "Exhibition area"
+  }
+]

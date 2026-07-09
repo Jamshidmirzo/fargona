@@ -35,4 +35,33 @@ try {
   // Already exists
 }
 
+// Migration: Create site_translations table
+try {
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS site_translations (
+      key TEXT PRIMARY KEY,
+      uz TEXT,
+      ru TEXT,
+      en TEXT
+    );
+  `);
+  
+  const count = db.prepare('SELECT COUNT(*) AS cnt FROM site_translations').get().cnt;
+  if (count === 0) {
+    const defaultTranslationsPath = path.join(__dirname, 'default_translations.json');
+    if (fs.existsSync(defaultTranslationsPath)) {
+      const list = JSON.parse(fs.readFileSync(defaultTranslationsPath, 'utf-8'));
+      const stmt = db.prepare('INSERT INTO site_translations (key, uz, ru, en) VALUES (?, ?, ?, ?)');
+      const insertMany = db.transaction((items) => {
+        for (const item of items) {
+          stmt.run(item.key, item.uz, item.ru, item.en);
+        }
+      });
+      insertMany(list);
+    }
+  }
+} catch (e) {
+  console.error('Failed to migrate/seed site_translations:', e);
+}
+
 module.exports = db;
