@@ -25,8 +25,20 @@ function haversineKm(lat1, lon1, lat2, lon2) {
 }
 
 function createIcon(isSelected, museum) {
-  const imgHtml = museum?.heroImage 
-    ? `<img src="${API_URL}${museum.heroImage}" style="width:100%; height:100%; object-fit:cover;" />` 
+  let firstImg = '';
+  if (museum?.heroImage) {
+    try {
+      if (museum.heroImage.startsWith('[')) {
+        firstImg = JSON.parse(museum.heroImage)[0] || '';
+      } else {
+        firstImg = museum.heroImage;
+      }
+    } catch(e) {
+      firstImg = museum.heroImage;
+    }
+  }
+  const imgHtml = firstImg 
+    ? `<img src="${API_URL}${firstImg}" style="width:100%; height:100%; object-fit:cover;" />` 
     : '';
   
   return L.divIcon({
@@ -129,11 +141,25 @@ export default function MapPage() {
         <div style={{ minHeight: 120 }}>
           {selectedMuseum ? (
             <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', overflow: 'hidden', animation: 'fhRise .4s cubic-bezier(0.2, 0.8, 0.2, 1) both', boxShadow: '0 8px 30px rgba(0,0,0,0.06)' }}>
-              {selectedMuseum.heroImage ? (
-                 <div style={{ width: '100%', height: 180, overflow: 'hidden' }}>
-                   <img src={`${API_URL}${selectedMuseum.heroImage}`} alt={(selectedMuseum[lang] || selectedMuseum.uz || selectedMuseum.ru || selectedMuseum.en || selectedMuseum).name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                 </div>
-              ) : null}
+              {(() => {
+                let firstImg = '';
+                if (selectedMuseum.heroImage) {
+                  try {
+                    if (selectedMuseum.heroImage.startsWith('[')) {
+                      firstImg = JSON.parse(selectedMuseum.heroImage)[0] || '';
+                    } else {
+                      firstImg = selectedMuseum.heroImage;
+                    }
+                  } catch(e) {
+                    firstImg = selectedMuseum.heroImage;
+                  }
+                }
+                return firstImg ? (
+                  <div style={{ width: '100%', height: 180, overflow: 'hidden' }}>
+                    <img src={`${API_URL}${firstImg}`} alt={(selectedMuseum[lang] || selectedMuseum.uz || selectedMuseum.ru || selectedMuseum.en || selectedMuseum).name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                ) : null;
+              })()}
               <div style={{ padding: 26 }}>
                 <div style={{ fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>{CITIES[selectedMuseum.city]?.[lang]}</div>
                 <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 25, color: 'var(--fg)', margin: '0 0 5px', lineHeight: 1.1 }}>{(selectedMuseum[lang] || selectedMuseum.uz || selectedMuseum.ru || selectedMuseum.en || selectedMuseum).name}</h3>

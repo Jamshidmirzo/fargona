@@ -34,9 +34,23 @@ export default function MuseumCard({ museum, index, useCardView = false }) {
             width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             color: 'var(--muted)', fontSize: 13, fontFamily: 'var(--font-ui)', letterSpacing: '.1em'
           }}>
-            {museum.heroImage ? (
-              <img src={`${API_URL}${museum.heroImage}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : t.photoHere}
+            {(() => {
+              let firstImg = '';
+              if (museum.heroImage) {
+                try {
+                  if (museum.heroImage.startsWith('[')) {
+                    firstImg = JSON.parse(museum.heroImage)[0] || '';
+                  } else {
+                    firstImg = museum.heroImage;
+                  }
+                } catch(e) {
+                  firstImg = museum.heroImage;
+                }
+              }
+              return firstImg ? (
+                <img src={`${API_URL}${firstImg}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : t.photoHere;
+            })()}
           </div>
           <div style={{
             position: 'absolute', top: 12, left: 14,

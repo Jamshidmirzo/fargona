@@ -5,7 +5,7 @@ import { CITIES, CITY_KM, epithets  } from '../data/museums';
 import { useMuseums } from '../contexts/MuseumsContext';
 import QuizPlayer from '../components/QuizPlayer';
 import ExpositionPlayer from '../components/ExpositionPlayer';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { API_URL } from '../config';
 
 function distKm(a, b) {
@@ -20,6 +20,7 @@ export default function MuseumPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { lang, t } = useLang();
+  const [activeImgIdx, setActiveImgIdx] = useState(0);
   const { isSaved, toggleSave, markVisited } = useSaved();
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
 
@@ -56,6 +57,29 @@ export default function MuseumPage() {
     }
   });
 
+  // Parse hero images list
+  let heroImages = [];
+  try {
+    if (museum.heroImage) {
+      if (museum.heroImage.startsWith('[')) {
+        heroImages = JSON.parse(museum.heroImage);
+      } else {
+        heroImages = [museum.heroImage];
+      }
+    }
+  } catch (e) {
+    heroImages = [museum.heroImage];
+  }
+
+  // Auto slide interval
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveImgIdx(prev => (prev + 1) % heroImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+
   const saveStyle = saved
     ? { background: 'var(--accent)', color: 'var(--accent-fg)', border: '1px solid var(--accent)' }
     : { background: 'color-mix(in srgb, var(--surface) 84%, transparent)', color: 'var(--fg)', border: '1px solid var(--line)', backdropFilter: 'blur(4px)' };
@@ -65,8 +89,51 @@ export default function MuseumPage() {
       <button onClick={() => navigate('/')} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: 14, padding: '6px 0', marginBottom: 18 }}>{t.backToList}</button>
 
       <div style={{ position: 'relative', height: 'min(52vh, 440px)', width: '100%', overflow: 'hidden', border: '1px solid var(--line)', borderRadius: 'var(--radius)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        {museum.heroImage ? (
-          <img src={`${API_URL}${museum.heroImage}`} alt={loc.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {heroImages.length > 0 ? (
+          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+            {heroImages.map((img, idx) => (
+              <img
+                key={idx}
+                src={`${API_URL}${img}`}
+                alt={`${loc.name} ${idx + 1}`}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  position: 'absolute',
+                  inset: 0,
+                  opacity: activeImgIdx === idx ? 1 : 0,
+                  transition: 'opacity 0.8s ease-in-out'
+                }}
+              />
+            ))}
+            {heroImages.length > 1 && (
+              <>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveImgIdx(prev => (prev - 1 + heroImages.length) % heroImages.length); }} 
+                  style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: 20 }}
+                >
+                  ‹
+                </button>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setActiveImgIdx(prev => (prev + 1) % heroImages.length); }} 
+                  style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: 20 }}
+                >
+                  ›
+                </button>
+                {/* Dots indicator */}
+                <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, zIndex: 10 }}>
+                  {heroImages.map((_, idx) => (
+                    <div 
+                      key={idx} 
+                      onClick={(e) => { e.stopPropagation(); setActiveImgIdx(idx); }}
+                      style={{ width: 8, height: 8, borderRadius: '50%', background: activeImgIdx === idx ? 'var(--accent)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'background .3s' }} 
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           <div style={{ color: 'var(--muted)', fontFamily: 'var(--font-ui)', fontSize: 14, letterSpacing: '.1em' }}>{t.photoHere}</div>
         )}

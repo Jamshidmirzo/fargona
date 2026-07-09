@@ -361,6 +361,21 @@ exports.deleteExhibit = (req, res) => {
   }
 };
 
+exports.updateExhibit = (req, res) => {
+  try {
+    const { exhibitId } = req.params;
+    const { title, description, image } = req.body;
+    
+    const stmt = db.prepare('UPDATE exhibits SET title = ?, desc = ?, image_url = ? WHERE id = ?');
+    stmt.run(title || '', description || '', image || '', exhibitId);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update exhibit' });
+  }
+};
+
 exports.createQuizStat = (req, res) => {
   try {
     const { username, museum_id, score, total } = req.body;

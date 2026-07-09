@@ -29,8 +29,12 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [editId, setEditId] = useState(null);
   const [formLang, setFormLang] = useState(lang);
-  const [uploadedHeroImage, setUploadedHeroImage] = useState('');
+  const [uploadedHeroImages, setUploadedHeroImages] = useState([]);
   const [quizStats, setQuizStats] = useState([]);
+  const [editingExhibitId, setEditingExhibitId] = useState(null);
+  const [editingExhibitTitle, setEditingExhibitTitle] = useState('');
+  const [editingExhibitDesc, setEditingExhibitDesc] = useState('');
+  const [editingExhibitImage, setEditingExhibitImage] = useState('');
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -299,7 +303,7 @@ export default function AdminPage() {
                 <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, margin: '0 0 8px', color: 'var(--fg)' }}>Museums Database</h1>
                 <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15 }}>Manage {mCount} locations across the Fergana Valley.</p>
               </div>
-              <button className="btn-primary" style={{ padding: '12px 24px', fontSize: 14 }} onClick={() => { setEditId('new'); setFormLang(lang); }}>+ Add New Museum</button>
+              <button className="btn-primary" style={{ padding: '12px 24px', fontSize: 14 }} onClick={() => { setEditId('new'); setFormLang(lang); setUploadedHeroImages([]); }}>+ Add New Museum</button>
             </header>
             
             {editId ? (() => {
@@ -406,14 +410,42 @@ export default function AdminPage() {
                     </div>
 
                     <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Main Hero Image</label>
-                      {uploadedHeroImage && (
-                        <div style={{ width: '100%', height: 160, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)', marginBottom: 12, maxWidth: 300 }}>
-                          <img src={`${API_URL}${uploadedHeroImage}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Hero Images Carousel (Upload multiple photos)</label>
+                      {uploadedHeroImages.length > 0 && (
+                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                          {uploadedHeroImages.map((img, idx) => (
+                            <div key={idx} style={{ position: 'relative', width: 100, height: 80, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                              <img src={`${API_URL}${img}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              <button 
+                                type="button" 
+                                onClick={() => setUploadedHeroImages(prev => prev.filter((_, i) => i !== idx))} 
+                                style={{ position: 'absolute', top: 4, right: 4, background: '#D32F2F', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold' }}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
                         </div>
                       )}
-                      <input type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setUploadedHeroImage)} style={{ display: 'block', width: '100%', fontSize: 14 }} />
-                      <input type="hidden" name="heroImage" value={uploadedHeroImage} />
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={async (e) => {
+                          const file = e.target.files[0];
+                          if (!file) return;
+                          const formData = new FormData();
+                          formData.append('file', file);
+                          try {
+                            const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: formData });
+                            if (res.ok) {
+                              const data = await res.json();
+                              setUploadedHeroImages(prev => [...prev, data.url]);
+                            }
+                          } catch(err) { console.error(err); }
+                        }} 
+                        style={{ display: 'block', width: '100%', fontSize: 14 }} 
+                      />
+                      <input type="hidden" name="heroImage" value={JSON.stringify(uploadedHeroImages)} />
                     </div>
 
                     <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
@@ -440,27 +472,131 @@ export default function AdminPage() {
                         <div style={{ color: 'var(--muted)', fontSize: 14, fontStyle: 'italic' }}>No exhibits added for {formLang.toUpperCase()} translation.</div>
                       ) : (
                         (museumObj[formLang]?.exhibits || []).map((ex, idx) => (
-                          <div key={ex.id || idx} style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'var(--surface2)', padding: 16, borderRadius: 10, border: '1px solid var(--line)' }}>
-                            {ex.image && (
-                              <div style={{ width: 80, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)', flexShrink: 0 }}>
-                                <img src={`${API_URL}${ex.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <div key={ex.id || idx} style={{ width: '100%' }}>
+                            {editingExhibitId === ex.id ? (
+                              <div style={{ background: 'var(--surface2)', padding: 20, borderRadius: 10, border: '1px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>Exhibit Title</label>
+                                  <input 
+                                    type="text" 
+                                    value={editingExhibitTitle} 
+                                    onChange={(e) => setEditingExhibitTitle(e.target.value)} 
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14 }} 
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>Description</label>
+                                  <textarea 
+                                    value={editingExhibitDesc} 
+                                    onChange={(e) => setEditingExhibitDesc(e.target.value)} 
+                                    rows={3} 
+                                    style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, resize: 'vertical' }} 
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 4 }}>Exhibit Image</label>
+                                  {editingExhibitImage && (
+                                    <div style={{ width: 80, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)', marginBottom: 8 }}>
+                                      <img src={`${API_URL}${editingExhibitImage}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    </div>
+                                  )}
+                                  <input 
+                                    type="file" 
+                                    accept="image/*" 
+                                    onChange={async (e) => {
+                                      const file = e.target.files[0];
+                                      if (!file) return;
+                                      const formData = new FormData();
+                                      formData.append('file', file);
+                                      try {
+                                        const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: formData });
+                                        if (res.ok) {
+                                          const data = await res.json();
+                                          setEditingExhibitImage(data.url);
+                                        }
+                                      } catch (err) { console.error(err); }
+                                    }} 
+                                    style={{ fontSize: 13 }} 
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+                                  <button 
+                                    type="button" 
+                                    onClick={async () => {
+                                      if (!editingExhibitTitle) return alert('Title is required');
+                                      try {
+                                        const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits/${ex.id}`, {
+                                          method: 'PUT',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ title: editingExhibitTitle, description: editingExhibitDesc, image: editingExhibitImage })
+                                        });
+                                        if (res.ok) {
+                                          setEditingExhibitId(null);
+                                          window.location.reload();
+                                        } else {
+                                          alert('Failed to save exhibit');
+                                        }
+                                      } catch(err) { console.error(err); }
+                                    }} 
+                                    className="btn-primary" 
+                                    style={{ padding: '8px 16px', fontSize: 13 }}
+                                  >
+                                    Save
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setEditingExhibitId(null)} 
+                                    className="btn-secondary" 
+                                    style={{ padding: '8px 16px', fontSize: 13 }}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', gap: 16, alignItems: 'center', background: 'var(--surface2)', padding: 16, borderRadius: 10, border: '1px solid var(--line)' }}>
+                                {ex.image && (
+                                  <div style={{ width: 80, height: 60, borderRadius: 6, overflow: 'hidden', border: '1px solid var(--line)', flexShrink: 0 }}>
+                                    <img src={`${API_URL}${ex.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                  </div>
+                                )}
+                                <div style={{ flex: 1 }}>
+                                  <h5 style={{ fontSize: 15, margin: '0 0 4px', fontWeight: 600, color: 'var(--fg)' }}>{ex.title}</h5>
+                                  <p style={{ fontSize: 13, margin: 0, color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ex.description}</p>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => {
+                                      setEditingExhibitId(ex.id);
+                                      setEditingExhibitTitle(ex.title || '');
+                                      setEditingExhibitDesc(ex.description || '');
+                                      setEditingExhibitImage(ex.image || '');
+                                    }} 
+                                    style={{ padding: '6px 12px', fontSize: 12, background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--fg)', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    onClick={async () => {
+                                      if (window.confirm('Delete this exhibit?')) {
+                                        try {
+                                          const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits/${ex.id}`, { method: 'DELETE' });
+                                          if (res.ok) window.location.reload();
+                                          else alert('Failed to delete exhibit');
+                                        } catch (e) {
+                                          alert('Error deleting exhibit');
+                                        }
+                                      }
+                                    }} 
+                                    style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
                               </div>
                             )}
-                            <div style={{ flex: 1 }}>
-                              <h5 style={{ fontSize: 15, margin: '0 0 4px', fontWeight: 600, color: 'var(--fg)' }}>{ex.title}</h5>
-                              <p style={{ fontSize: 13, margin: 0, color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ex.description}</p>
-                            </div>
-                            <button type="button" onClick={async () => {
-                              if (window.confirm('Delete this exhibit?')) {
-                                try {
-                                  const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits/${ex.id}`, { method: 'DELETE' });
-                                  if (res.ok) window.location.reload();
-                                  else alert('Failed to delete exhibit');
-                                } catch (e) {
-                                  alert('Error deleting exhibit');
-                                }
-                              }
-                            }} style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}>Delete</button>
                           </div>
                         ))
                       )}
@@ -562,7 +698,20 @@ export default function AdminPage() {
                             </div>
                           </td>
                           <td style={{ padding: '16px 24px', textAlign: 'right' }}>
-                            <button onClick={() => { setEditId(m.id); setFormLang(lang); }} style={{ padding: '8px 16px', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontWeight: 500, transition: 'all .2s' }}>Edit</button>
+                            <button onClick={() => {
+                              let parsedImgs = [];
+                              try {
+                                if (m.heroImage) {
+                                  if (m.heroImage.startsWith('[')) parsedImgs = JSON.parse(m.heroImage);
+                                  else parsedImgs = [m.heroImage];
+                                }
+                              } catch (e) {
+                                parsedImgs = [m.heroImage];
+                              }
+                              setEditId(m.id);
+                              setFormLang(lang);
+                              setUploadedHeroImages(parsedImgs);
+                            }} style={{ padding: '8px 16px', fontSize: 13, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 8, cursor: 'pointer', color: 'var(--fg)', fontWeight: 500, transition: 'all .2s' }}>Edit</button>
                             <button onClick={async () => {
                               if (window.confirm('Are you sure you want to delete this museum?')) {
                                 try {
