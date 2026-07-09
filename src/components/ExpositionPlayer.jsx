@@ -43,7 +43,10 @@ export default function ExpositionPlayer({ museum, onExit }) {
       
       if (percent >= 100) {
         if (currentIndex >= total - 1) {
-          onExit();
+          setIsPlaying(false);
+          setTimeout(() => {
+            onExit();
+          }, 0);
           return; // Stop animation loop
         }
         // Next slide

@@ -81,7 +81,9 @@ export default function MuseumPage() {
         <div style={{ display: 'flex', gap: 11, flexWrap: 'wrap' }}>
           <button onClick={(e) => { e.stopPropagation(); toggleSave(museum.id); }} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', fontSize: 15, fontWeight: 600, padding: '13px 22px', borderRadius: 99, transition: 'all .2s', ...saveStyle }}>{saved ? t.saved : t.save}</button>
           <button onClick={() => setSearchParams({ visit: 'true' })} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)', padding: '13px 22px', borderRadius: 99, fontSize: 15, fontWeight: 600 }}>{t.enterVisit || 'Виртуальный тур'}</button>
-          <button onClick={() => setSearchParams({ quiz: 'true' })} className="btn-primary">{t.takeQuiz}</button>
+          {loc.quiz && loc.quiz.length > 0 && (
+            <button onClick={() => setSearchParams({ quiz: 'true' })} className="btn-primary">{t.takeQuiz}</button>
+          )}
         </div>
       </div>
 
@@ -114,7 +116,7 @@ export default function MuseumPage() {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--fg)', margin: '0 0 18px' }}>{t.museumInfo}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {[['address', loc.info.address], ['founded', loc.info.founded], ['hours', loc.info.hours], ['entry', loc.info.entry], ['phone', loc.info.phone]].map(([key, val]) => (
+              {[['address', loc.info?.address], ['founded', loc.info?.founded], ['hours', loc.info?.hours], ['entry', loc.info?.entry], ['phone', loc.info?.phone]].map(([key, val]) => (
                 <div key={key}>
                   <div style={{ fontSize: 11, textTransform: 'uppercase', letterSpacing: '.13em', color: 'var(--muted)', marginBottom: 3 }}>{t[key]}</div>
                   <div style={{ fontSize: 14.5, color: 'var(--fg)' }}>{val}</div>

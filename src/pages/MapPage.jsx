@@ -12,6 +12,17 @@ function distKm(a, b) {
   return CITY_KM[k1] ?? CITY_KM[k2] ?? 50;
 }
 
+// Real Haversine distance for GPS calculations
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
 function createIcon(isSelected, museum) {
   const imgHtml = museum?.heroImage 
     ? `<img src="http://localhost:3000${museum.heroImage}" style="width:100%; height:100%; object-fit:cover;" />` 
@@ -71,7 +82,9 @@ export default function MapPage() {
     let best = Infinity;
     museums.forEach(o => {
       if (o.id === selectedMuseum.id) return;
-      const km = haversineKm(MUSEUM_COORDS[selectedMuseum.id]?.[0], MUSEUM_COORDS[selectedMuseum.id]?.[1], MUSEUM_COORDS[o.id]?.[0], MUSEUM_COORDS[o.id]?.[1]);
+      const c1 = MUSEUM_COORDS[selectedMuseum.id] || [40.48, 71.35];
+      const c2 = MUSEUM_COORDS[o.id] || [40.48, 71.35];
+      const km = haversineKm(c1[0], c1[1], c2[0], c2[1]);
       if (km < best) { 
         best = km; 
         nearestName = (o[lang] || o.uz || o.ru || o.en || o).name; 

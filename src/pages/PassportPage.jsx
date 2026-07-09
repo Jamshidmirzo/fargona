@@ -12,7 +12,7 @@ export default function PassportPage() {
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
 
   const total = museums.length;
-  const visitedCount = visited.length;
+  const visitedCount = museums.filter(m => visited.includes(m.id)).length;
   const pct = total ? Math.round((visitedCount / total) * 100) : 0;
 
   return (
