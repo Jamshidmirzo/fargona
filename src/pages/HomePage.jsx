@@ -1,15 +1,44 @@
+import { useState, useMemo } from 'react';
 import { useLang } from '../contexts/LangContext';
 import { useMuseums } from '../contexts/MuseumsContext';
 import MuseumCard from '../components/MuseumCard';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config';
 
+const SORT_LABELS = {
+  ru: { default: 'По умолчанию', name: 'По названию', city: 'По городу', era: 'По эпохе' },
+  uz: { default: 'Standart', name: 'Nomi bo\'yicha', city: 'Shahar bo\'yicha', era: 'Davr bo\'yicha' },
+  en: { default: 'Default', name: 'By name', city: 'By city', era: 'By era' },
+};
+
+function sortMuseums(museums, sortBy, lang) {
+  if (sortBy === 'default') return museums;
+  const list = [...museums];
+  if (sortBy === 'name') {
+    list.sort((a, b) => {
+      const na = (a[lang] || a.uz || {}).name || '';
+      const nb = (b[lang] || b.uz || {}).name || '';
+      return na.localeCompare(nb);
+    });
+  } else if (sortBy === 'city') {
+    list.sort((a, b) => (a.city || '').localeCompare(b.city || ''));
+  } else if (sortBy === 'era') {
+    list.sort((a, b) => (a.birth || 9999) - (b.birth || 9999));
+  }
+  return list;
+}
+
 export default function HomePage() {
   const { museums, loading } = useMuseums();
   const { lang, t } = useLang();
   const navigate = useNavigate();
+  const [sortBy, setSortBy] = useState('default');
+
+  const sortedMuseums = useMemo(() => sortMuseums(museums, sortBy, lang), [museums, sortBy, lang]);
+
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
   const cityCount = new Set(museums.map(m => m.city)).size;
+  const labels = SORT_LABELS[lang] || SORT_LABELS.ru;
 
   return (
     <main style={{ animation: 'fhFade .5s ease both' }}>
@@ -41,7 +70,7 @@ export default function HomePage() {
               </button>
             </div>
           </div>
-          
+
           <div style={{ animation: 'fhArch 1.2s cubic-bezier(.5,0,.2,1) both', display: 'flex', flexDirection: 'column', gap: 18 }}>
             <div style={{ position: 'relative', height: 'min(78vh, 644px)', border: '1px solid var(--line)', borderRadius: '50% 50% 4px 4px / 30% 30% 4px 4px', overflow: 'hidden', background: 'var(--surface2)' }}>
               <div style={{ position: 'absolute', inset: 9, border: '1px solid color-mix(in srgb, var(--accent) 45%, transparent)', borderRadius: '50% 50% 3px 3px / 30% 30% 3px 3px', zIndex: 4, pointerEvents: 'none' }}></div>
@@ -71,8 +100,33 @@ export default function HomePage() {
 
       {/* INDEX */}
       <section id="museum-grid" style={{ maxWidth: 1080, margin: '0 auto', padding: '58px 40px 110px' }}>
+        {/* Sort toolbar */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 36, flexWrap: 'wrap' }}>
+          {['default', 'name', 'city', 'era'].map(opt => (
+            <button
+              key={opt}
+              onClick={() => setSortBy(opt)}
+              style={{
+                fontFamily: 'var(--font-ui)',
+                fontSize: 11,
+                fontWeight: 600,
+                letterSpacing: '.1em',
+                textTransform: 'uppercase',
+                padding: '7px 18px',
+                borderRadius: 99,
+                border: sortBy === opt ? 'none' : '1px solid var(--line)',
+                background: sortBy === opt ? 'var(--accent)' : 'transparent',
+                color: sortBy === opt ? 'var(--accent-fg)' : 'var(--muted)',
+                cursor: 'pointer',
+                transition: 'all .15s',
+              }}
+            >
+              {labels[opt]}
+            </button>
+          ))}
+        </div>
         <div>
-          {museums.map((m, i) => <MuseumCard key={m.id} museum={m} index={i} />)}
+          {sortedMuseums.map((m, i) => <MuseumCard key={m.id} museum={m} index={i} />)}
         </div>
         <div style={{ borderTop: '1px solid var(--line)' }}></div>
       </section>

@@ -134,4 +134,34 @@ try {
   console.error('Failed to migrate news & events tables:', e);
 }
 
+// Add event_time column if missing
+try {
+  db.exec(`ALTER TABLE museum_events ADD COLUMN event_time TEXT DEFAULT ''`);
+} catch (e) { /* column already exists */ }
+
+// Migration: Fix hero_image for museums missing building exterior photos
+try {
+  const uvaysi = db.prepare("SELECT hero_image FROM museums WHERE id = 'uvaysi'").get();
+  if (!uvaysi || !uvaysi.hero_image) {
+    db.prepare("UPDATE museums SET hero_image = '/uploads/museum_uvaysi.jpg' WHERE id = 'uvaysi'").run();
+  }
+  const haziniy = db.prepare("SELECT hero_image FROM museums WHERE id = 'haziniy'").get();
+  if (!haziniy || !haziniy.hero_image) {
+    db.prepare("UPDATE museums SET hero_image = '/uploads/museum_haziniy.jpg' WHERE id = 'haziniy'").run();
+  }
+  // Clear exposition photos mistakenly stored as hero_image
+  db.prepare("UPDATE museums SET hero_image = NULL WHERE id = 'vohidov_house' AND hero_image LIKE '[%'").run();
+  db.prepare("UPDATE museums SET hero_image = NULL WHERE id = 'vohidov_memorial' AND hero_image LIKE '[%'").run();
+} catch (e) {
+  console.error('Failed to fix hero_image:', e);
+}
+
+// Migration: Create site_visits table
+try {
+  db.exec(`CREATE TABLE IF NOT EXISTS site_visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`);
+} catch (e) { /* already exists */ }
+
 module.exports = db;

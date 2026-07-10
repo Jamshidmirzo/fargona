@@ -10,7 +10,8 @@ export function MuseumsProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
+    // Only show loading spinner on first load (no data yet)
+    if (museums.length === 0) setLoading(true);
     fetch(`${API_URL}/api/museums?lang=${lang}`)
       .then(res => res.json())
       .then(data => {

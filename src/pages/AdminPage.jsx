@@ -5,16 +5,25 @@ import { useAuth } from '../contexts/AuthContext';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config';
+import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
+import L from 'leaflet';
 
-const mockTraffic = [
-  { name: 'Mon', visits: 120 },
-  { name: 'Tue', visits: 150 },
-  { name: 'Wed', visits: 110 },
-  { name: 'Thu', visits: 170 },
-  { name: 'Fri', visits: 190 },
-  { name: 'Sat', visits: 240 },
-  { name: 'Sun', visits: 220 },
-];
+function MapClickHandler({ onClickCoords }) {
+  useMapEvents({ click(e) { onClickCoords([e.latlng.lat, e.latlng.lng]); } });
+  return null;
+}
+
+function MapRecenter({ center }) {
+  const map = useMap();
+  useEffect(() => { if (center) map.setView(center, 14); }, [JSON.stringify(center)]);
+  return null;
+}
+
+const _markerIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41], iconAnchor: [12, 41]
+});
 
 
 export default function AdminPage() {
@@ -42,6 +51,40 @@ export default function AdminPage() {
 
   // Admin user management state
   const [adminsList, setAdminsList] = useState([]);
+  const [showAdminPassword, setShowAdminPassword] = useState(false);
+  const [resetPasswordId, setResetPasswordId] = useState(null);
+  const [resetPasswordValue, setResetPasswordValue] = useState('');
+  const [showResetPassword, setShowResetPassword] = useState(false);
+
+  // News & Events dedicated tab state
+  const [neSubTab, setNeSubTab] = useState('news');
+  const [neLang, setNeLang] = useState('ru');
+  const [neMuseumId, setNeMuseumId] = useState('');
+  const [allNewsGlobal, setAllNewsGlobal] = useState([]);
+  const [allEventsGlobal, setAllEventsGlobal] = useState([]);
+  const [neLoading, setNeLoading] = useState(false);
+  const [newsForm, setNewsForm] = useState({ title: '', content: '', image: '' });
+  const [eventsForm, setEventsForm] = useState({ title: '', description: '', date: '', time: '' });
+
+  // Exposition tab state
+  const [newExhibitImg, setNewExhibitImg] = useState('');
+  const [exhibitsList, setExhibitsList] = useState([]);
+  const [expoMuseumId, setExpoMuseumId] = useState('');
+  const [expoLang, setExpoLang] = useState('ru');
+  const [expoExhibits, setExpoExhibits] = useState([]);
+  const [expoLoading, setExpoLoading] = useState(false);
+  const [expoEditId, setExpoEditId] = useState(null);
+  const [expoEditTitle, setExpoEditTitle] = useState('');
+  const [expoEditDesc, setExpoEditDesc] = useState('');
+  const [expoAddImg, setExpoAddImg] = useState('');
+
+  // Visit stats for dashboard
+  const [visitStats, setVisitStats] = useState(null);
+
+  // Multi-lang edit form state
+  const [allLangData, setAllLangData] = useState({ uz: {}, ru: {}, en: {} });
+  const [editCoords, setEditCoords] = useState(null);
+  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -66,9 +109,36 @@ export default function AdminPage() {
         console.error('Failed to fetch site translations', err);
       }
     };
+    const fetchVisits = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/museums/visits/stats`);
+        if (res.ok) setVisitStats(await res.json());
+      } catch (err) { /* ignore */ }
+    };
     fetchStats();
     fetchTranslations();
+    fetchVisits();
   }, []);
+
+  // Load all 3 language data when opening museum editor
+  useEffect(() => {
+    if (!editId || editId === 'new') {
+      setAllLangData({ uz: {}, ru: {}, en: {} });
+      setEditCoords(null);
+      return;
+    }
+    Promise.all(['uz', 'ru', 'en'].map(l =>
+      fetch(`${API_URL}/api/museums/${editId}?lang=${l}`).then(r => r.ok ? r.json() : null)
+    )).then(([uzRes, ruRes, enRes]) => {
+      setEditCoords(uzRes?.coords || null);
+      setAllLangData({
+        uz: uzRes?.uz || {},
+        ru: ruRes?.ru || {},
+        en: enRes?.en || {}
+      });
+      setFormKey(k => k + 1);
+    }).catch(() => {});
+  }, [editId]);
 
   // Fetch admin list (super admin only)
   useEffect(() => {
@@ -89,6 +159,43 @@ export default function AdminPage() {
       fetchAdmins();
     }
   }, [user, token, activeTab]);
+
+  const fetchAllNewsEvents = async () => {
+    setNeLoading(true);
+    try {
+      const [rNews, rEvents] = await Promise.all([
+        fetch(`${API_URL}/api/museums/all-news?lang=${neLang}`),
+        fetch(`${API_URL}/api/museums/all-events?lang=${neLang}`)
+      ]);
+      if (rNews.ok) setAllNewsGlobal(await rNews.json());
+      if (rEvents.ok) setAllEventsGlobal(await rEvents.json());
+    } catch (e) { console.error(e); }
+    setNeLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === 'news_events') fetchAllNewsEvents();
+  }, [activeTab, neLang]);
+
+  // Fetch exhibits when museum editor opens
+  useEffect(() => {
+    if (!editId || editId === 'new') { setExhibitsList([]); return; }
+    fetch(`${API_URL}/api/museums/${editId}?lang=${formLang}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setExhibitsList((data[formLang] || data.uz || {}).exhibits || []); })
+      .catch(() => {});
+  }, [editId, formLang]);
+
+  // Fetch exposition exhibits for the dedicated exposition tab
+  useEffect(() => {
+    if (!expoMuseumId) { setExpoExhibits([]); return; }
+    setExpoLoading(true);
+    fetch(`${API_URL}/api/museums/${expoMuseumId}?lang=${expoLang}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { setExpoExhibits(data ? (data[expoLang] || data.uz || {}).exhibits || [] : []); })
+      .catch(() => { setExpoExhibits([]); })
+      .finally(() => setExpoLoading(false));
+  }, [expoMuseumId, expoLang]);
 
   // Fetch news & events when editing a museum
   useEffect(() => {
@@ -138,22 +245,23 @@ export default function AdminPage() {
     e.preventDefault();
     const formData = new FormData(e.target);
     const payload = Object.fromEntries(formData.entries());
-    
+
     try {
       const isNew = editId === 'new';
-      const url = isNew 
-        ? `${API_URL}/api/museums?lang=${formLang}` 
-        : `${API_URL}/api/museums/${editId}?lang=${formLang}`;
-        
+      // For new museums use ?lang=uz; for existing the backend detects multi-lang from name_uz field
+      const url = isNew
+        ? `${API_URL}/api/museums?lang=uz`
+        : `${API_URL}/api/museums/${editId}`;
+
       const res = await fetch(url, {
         method: isNew ? 'POST' : 'PUT',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(payload)
       });
-      
+
       if (res.ok) {
         window.location.reload();
       } else {
@@ -223,7 +331,9 @@ export default function AdminPage() {
   const tabs = [
     { id: 'dashboard', label: t.adminStats || 'Dashboard', icon: 'M3 3h7v7H3z M14 3h7v7h-7z M14 14h7v7h-7z M3 14h7v7H3z' },
     { id: 'museums', label: t.adminMuseums || 'Museums', icon: 'M4 6h16M4 12h16M4 18h16' },
-    { id: 'quizzes', label: t.adminQuizzes || 'Quizzes', icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' }
+    { id: 'quizzes', label: t.adminQuizzes || 'Quizzes', icon: 'M9 11l3 3L22 4 M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11' },
+    { id: 'news_events', label: 'Новости & Афиша', icon: 'M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10l6 6v8a2 2 0 01-2 2z M17 20v-8H7v8 M7 4v4h8' },
+    { id: 'exposition', label: 'Экспозиция', icon: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
   ];
 
   if (user?.role === 'super_admin') {
@@ -285,17 +395,14 @@ export default function AdminPage() {
             {/* Metric Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 40 }}>
               {[
-                { label: 'Total Museum Views', value: '11,850', trend: '+14%', color: 'var(--accent)' },
-                { label: 'Active Users (7d)', value: '3,240', trend: '+5%', color: 'var(--fg)' },
-                { label: 'Avg. Quiz Score', value: avgScoreStr, trend: '+2%', color: '#2E7D32' }
+                { label: 'Всего посещений', value: visitStats ? visitStats.total.toLocaleString() : '—', color: 'var(--accent)' },
+                { label: 'Сегодня', value: visitStats ? String(visitStats.today) : '—', color: 'var(--fg)' },
+                { label: 'Avg. Quiz Score', value: avgScoreStr, color: '#2E7D32' }
               ].map((m, i) => (
                 <div key={i} style={{ padding: 28, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', top: 0, left: 0, width: 4, height: '100%', background: m.color }} />
                   <div style={{ fontSize: 12.5, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 12 }}>{m.label}</div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 14 }}>
-                    <div style={{ fontFamily: 'var(--font-head)', fontSize: 44, color: 'var(--fg)', fontWeight: 800, lineHeight: 1 }}>{m.value}</div>
-                    <div style={{ fontSize: 14, color: '#2E7D32', fontWeight: 600, background: 'color-mix(in srgb, #2E7D32 12%, transparent)', padding: '4px 8px', borderRadius: 6 }}>{m.trend}</div>
-                  </div>
+                  <div style={{ fontFamily: 'var(--font-head)', fontSize: 44, color: 'var(--fg)', fontWeight: 800, lineHeight: 1 }}>{m.value}</div>
                 </div>
               ))}
             </div>
@@ -305,10 +412,10 @@ export default function AdminPage() {
               
               {/* Line Chart */}
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', padding: 32 }}>
-                <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 24px', color: 'var(--fg)' }}>Traffic Over 7 Days</h3>
+                <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 24px', color: 'var(--fg)' }}>Посещения за 7 дней</h3>
                 <div style={{ width: '100%', height: 300 }}>
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={mockTraffic} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                    <LineChart data={(visitStats?.days7 || []).map(d => ({ name: new Date(d.date + 'T12:00:00').toLocaleDateString('ru', { day: 'numeric', month: 'short' }), visits: d.visits }))} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--line)" vertical={false} />
                       <XAxis dataKey="name" stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} dy={10} />
                       <YAxis stroke="var(--muted)" fontSize={12} tickLine={false} axisLine={false} />
@@ -387,151 +494,138 @@ export default function AdminPage() {
               const mInfo = mData.info || {};
               return (
               <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', padding: 40, animation: 'fhRise .3s ease' }}>
-                <h3 style={{ margin: '0 0 24px', fontFamily: 'var(--font-head)', fontSize: 28, color: 'var(--fg)' }}>
-                  {isNew ? 'Create New Museum' : `Edit Museum: ${editId}`}
+                <h3 style={{ margin: '0 0 28px', fontFamily: 'var(--font-head)', fontSize: 28, color: 'var(--fg)' }}>
+                  {isNew ? 'Новый музей' : `Редактировать: ${editId}`}
                 </h3>
-                
-                {/* Language Switcher Tabs */}
-                <div style={{ display: 'flex', gap: 8, marginBottom: 30, borderBottom: '1px solid var(--line)', paddingBottom: 16 }}>
-                  {['uz', 'ru', 'en'].map(l => (
-                    <button type="button" key={l} onClick={() => setFormLang(l)} style={{
-                      fontFamily: 'var(--font-ui)', cursor: 'pointer', padding: '8px 16px', borderRadius: 8,
-                      border: formLang === l ? '1px solid var(--accent)' : '1px solid var(--line)',
-                      background: formLang === l ? 'var(--accent)' : 'var(--surface2)',
-                      color: formLang === l ? 'var(--accent-fg)' : 'var(--muted)',
-                      fontWeight: formLang === l ? 600 : 400,
-                      fontSize: 13.5
-                    }}>
-                      {l.toUpperCase()} {l === lang ? '(Active UI)' : ''}
-                    </button>
-                  ))}
-                </div>
 
-                <form onSubmit={handleSave}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+                <form key={formKey} onSubmit={handleSave}>
+                  {/* Shared fields */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
                     {isNew && (
                       <div style={{ gridColumn: '1 / -1' }}>
-                        <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Unique ID (English lowercase, no spaces, e.g. "al_farghani")</label>
-                        <input name="id" type="text" placeholder="e.g. al_farghani" required style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>ID (строчные латинские без пробелов)</label>
+                        <input name="id" type="text" placeholder="al_farghani" required style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                       </div>
                     )}
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Name ({formLang.toUpperCase()})</label>
-                      <input name="name" type="text" defaultValue={mData.name || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Address ({formLang.toUpperCase()})</label>
-                      <input name="address" type="text" defaultValue={mInfo.address || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Founded Date ({formLang.toUpperCase()})</label>
-                      <input name="founded" type="text" defaultValue={mInfo.founded || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Hours ({formLang.toUpperCase()})</label>
-                      <input name="hours" type="text" defaultValue={mInfo.hours || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Entry Fee ({formLang.toUpperCase()})</label>
-                      <input name="entry" type="text" defaultValue={mInfo.entry || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Phone</label>
-                      <input name="phone" type="text" defaultValue={mInfo.phone || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-
-                    <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>City (Select location category)</label>
-                      <select name="city" defaultValue={museumObj.city || 'kokand'} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }}>
-                        <option value="kokand">Qo'qon / Коканд / Kokand</option>
-                        <option value="margilan">Marg'ilon / Маргилан / Margilan</option>
-                        <option value="fergana">Farg'ona / Фергана / Fergana</option>
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Город</label>
+                      <select name="city" defaultValue={museumObj.city || 'kokand'} style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }}>
+                        <option value="kokand">Qo'qon / Коканд</option>
+                        <option value="margilan">Marg'ilon / Маргилан</option>
+                        <option value="fergana">Farg'ona / Фергана</option>
                       </select>
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Established Year (Number, e.g. 1959)</label>
-                      <input name="established" type="number" defaultValue={museumObj.established || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Телефон</label>
+                      <input name="phone" type="text" defaultValue={(allLangData.uz?.info || allLangData.ru?.info || {}).phone || ''} style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Author Birth Year (Number, e.g. 1889)</label>
-                      <input name="birth" type="number" defaultValue={museumObj.birth || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Год основания</label>
+                      <input name="established" type="number" defaultValue={museumObj.established || ''} style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Author Death Year (Number, e.g. 1929)</label>
-                      <input name="death" type="number" defaultValue={museumObj.death || ''} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-
-                    <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Real GPS Latitude (e.g. 40.525)</label>
-                      <input name="lat" type="number" step="any" defaultValue={museumObj.coords?.[0] || ''} placeholder="40.5" style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Год рождения автора</label>
+                      <input name="birth" type="number" defaultValue={museumObj.birth || ''} style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                     </div>
                     <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Real GPS Longitude (e.g. 70.945)</label>
-                      <input name="lon" type="number" step="any" defaultValue={museumObj.coords?.[1] || ''} placeholder="70.9" style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>2D Layout Grid X position (0 to 100)</label>
-                      <input name="pos_x" type="number" step="any" defaultValue={museumObj.pos?.x ?? 50} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>2D Layout Grid Y position (0 to 100)</label>
-                      <input name="pos_y" type="number" step="any" defaultValue={museumObj.pos?.y ?? 50} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none' }} />
-                    </div>
-
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Hero Images Carousel (Upload multiple photos)</label>
-                      {uploadedHeroImages.length > 0 && (
-                        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-                          {uploadedHeroImages.map((img, idx) => (
-                            <div key={idx} style={{ position: 'relative', width: 100, height: 80, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
-                              <img src={`${API_URL}${img}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                              <button 
-                                type="button" 
-                                onClick={() => setUploadedHeroImages(prev => prev.filter((_, i) => i !== idx))} 
-                                style={{ position: 'absolute', top: 4, right: 4, background: '#D32F2F', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 'bold' }}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                      <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={async (e) => {
-                          const file = e.target.files[0];
-                          if (!file) return;
-                          const formData = new FormData();
-                          formData.append('file', file);
-                          try {
-                            const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: formData });
-                            if (res.ok) {
-                              const data = await res.json();
-                              setUploadedHeroImages(prev => [...prev, data.url]);
-                            }
-                          } catch(err) { console.error(err); }
-                        }} 
-                        style={{ display: 'block', width: '100%', fontSize: 14 }} 
-                      />
-                      <input type="hidden" name="heroImage" value={JSON.stringify(uploadedHeroImages)} />
-                    </div>
-
-                    <div style={{ height: 1, background: 'var(--line)', gridColumn: '1 / -1', margin: '8px 0' }} />
-
-                    <div style={{ gridColumn: '1 / -1' }}>
-                      <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Biography ({formLang.toUpperCase()})</label>
-                      <textarea name="bio" defaultValue={mData.bio || ''} rows={6} style={{ width: '100%', padding: '14px 18px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, outline: 'none', resize: 'vertical', lineHeight: 1.5 }} />
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Год смерти автора</label>
+                      <input name="death" type="number" defaultValue={museumObj.death || ''} style={{ width: '100%', padding: '12px 16px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                     </div>
                   </div>
-                  <div style={{ display: 'flex', gap: 12, marginTop: 32 }}>
-                    <button type="submit" className="btn-primary">Save Changes</button>
-                    <button type="button" className="btn-secondary" onClick={() => setEditId(null)}>Cancel</button>
+
+                  {/* GPS Map Picker */}
+                  <div style={{ marginBottom: 24 }}>
+                    <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>
+                      GPS координаты — кликните на карту чтобы установить метку
+                      {editCoords && <span style={{ marginLeft: 12, color: 'var(--accent)', fontWeight: 600 }}>{editCoords[0].toFixed(5)}, {editCoords[1].toFixed(5)}</span>}
+                    </label>
+                    <div style={{ height: 280, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                      <MapContainer center={editCoords || [40.45, 71.0]} zoom={editCoords ? 15 : 11} style={{ height: '100%', width: '100%' }}>
+                        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="" />
+                        <MapClickHandler onClickCoords={setEditCoords} />
+                        {editCoords && <MapRecenter center={editCoords} />}
+                        {editCoords && <Marker position={editCoords} icon={_markerIcon} />}
+                      </MapContainer>
+                    </div>
+                    <input type="hidden" name="lat" value={editCoords?.[0] ?? ''} />
+                    <input type="hidden" name="lon" value={editCoords?.[1] ?? ''} />
+                  </div>
+
+                  {/* Hero Images */}
+                  <div style={{ marginBottom: 28 }}>
+                    <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Фото здания (главное изображение)</label>
+                    {uploadedHeroImages.length > 0 && (
+                      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+                        {uploadedHeroImages.map((img, idx) => (
+                          <div key={idx} style={{ position: 'relative', width: 100, height: 80, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                            <img src={`${API_URL}${img}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <button type="button" onClick={() => setUploadedHeroImages(prev => prev.filter((_, i) => i !== idx))}
+                              style={{ position: 'absolute', top: 4, right: 4, background: '#D32F2F', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', fontSize: 12, fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <input type="file" accept="image/*" onChange={async (e) => {
+                      const file = e.target.files[0];
+                      if (!file) return;
+                      const fd = new FormData();
+                      fd.append('file', file);
+                      try {
+                        const r = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: fd });
+                        if (r.ok) { const d = await r.json(); setUploadedHeroImages(prev => [...prev, d.url]); }
+                      } catch (err) { console.error(err); }
+                    }} style={{ fontSize: 13 }} />
+                    <input type="hidden" name="heroImage" value={JSON.stringify(uploadedHeroImages)} />
+                  </div>
+
+                  {/* 3-Language Sections */}
+                  <div style={{ borderTop: '1px solid var(--line)', paddingTop: 28, marginBottom: 28 }}>
+                    <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 18, margin: '0 0 20px', color: 'var(--fg)' }}>Переводы</h4>
+                    {(isNew ? ['uz'] : ['uz', 'ru', 'en']).map(l => {
+                      const ld = allLangData[l] || {};
+                      const li = ld.info || {};
+                      const labels = { uz: 'Ўзбекча', ru: 'Русский', en: 'English' };
+                      return (
+                        <div key={l} style={{ marginBottom: 28, background: 'var(--surface2)', borderRadius: 10, padding: 20, border: '1px solid var(--line)' }}>
+                          <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--accent)', marginBottom: 16 }}>{labels[l]}</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Название</label>
+                              <input name={isNew ? 'name' : `name_${l}`} type="text" defaultValue={ld.name || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Адрес</label>
+                              <input name={isNew ? 'address' : `address_${l}`} type="text" defaultValue={li.address || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Режим работы</label>
+                              <input name={isNew ? 'hours' : `hours_${l}`} type="text" defaultValue={li.hours || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Вход</label>
+                              <input name={isNew ? 'entry' : `entry_${l}`} type="text" defaultValue={li.entry || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Дата основания</label>
+                              <input name={isNew ? 'founded' : `founded_${l}`} type="text" defaultValue={li.founded || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Должность / роль</label>
+                              <input name={isNew ? 'role' : `role_${l}`} type="text" defaultValue={ld.role || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Биография</label>
+                              <textarea name={isNew ? 'bio' : `bio_${l}`} defaultValue={ld.bio || ''} rows={5} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none', resize: 'vertical', lineHeight: 1.5 }} />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                    <button type="submit" className="btn-primary">Сохранить</button>
+                    <button type="button" className="btn-secondary" onClick={() => setEditId(null)}>Отмена</button>
                   </div>
                 </form>
 
@@ -542,10 +636,10 @@ export default function AdminPage() {
                     
                     {/* List of current exhibits */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
-                      {(museumObj[formLang]?.exhibits || []).length === 0 ? (
+                      {(exhibitsList).length === 0 ? (
                         <div style={{ color: 'var(--muted)', fontSize: 14, fontStyle: 'italic' }}>No exhibits added for {formLang.toUpperCase()} translation.</div>
                       ) : (
-                        (museumObj[formLang]?.exhibits || []).map((ex, idx) => (
+                        (exhibitsList).map((ex, idx) => (
                           <div key={ex.id || idx} style={{ width: '100%' }}>
                             {editingExhibitId === ex.id ? (
                               <div style={{ background: 'var(--surface2)', padding: 20, borderRadius: 10, border: '1px solid var(--accent)', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -609,7 +703,7 @@ export default function AdminPage() {
                                         });
                                         if (res.ok) {
                                           setEditingExhibitId(null);
-                                          window.location.reload();
+                                          setExhibitsList(prev => prev.map(x => x.id === ex.id ? { ...x, title: editingExhibitTitle, description: editingExhibitDesc, image: editingExhibitImage } : x));
                                         } else {
                                           alert('Failed to save exhibit');
                                         }
@@ -663,7 +757,7 @@ export default function AdminPage() {
                                             method: 'DELETE',
                                             headers: { 'Authorization': `Bearer ${token}` }
                                           });
-                                          if (res.ok) window.location.reload();
+                                          if (res.ok) setExhibitsList(prev => prev.filter(x => x.id !== ex.id));
                                           else alert('Failed to delete exhibit');
                                         } catch (e) {
                                           alert('Error deleting exhibit');
@@ -701,7 +795,7 @@ export default function AdminPage() {
                               const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: formData });
                               if (res.ok) {
                                 const data = await res.json();
-                                window.newExhibitImage = data.url;
+                                setNewExhibitImg(data.url);
                                 alert('Image uploaded successfully!');
                               }
                             } catch (err) {
@@ -717,21 +811,24 @@ export default function AdminPage() {
                       <button type="button" onClick={async () => {
                         const title = document.getElementById('new_exhibit_title').value;
                         const description = document.getElementById('new_exhibit_desc').value;
-                        const image = window.newExhibitImage || '';
+                        const image = newExhibitImg || '';
                         if (!title) return alert('Title is required');
-                        
+
                         try {
                           const res = await fetch(`${API_URL}/api/museums/${editId}/exhibits?lang=${formLang}`, {
                             method: 'POST',
-                            headers: { 
+                            headers: {
                               'Content-Type': 'application/json',
                               'Authorization': `Bearer ${token}`
                             },
                             body: JSON.stringify({ title, description, image })
                           });
                           if (res.ok) {
-                            window.newExhibitImage = '';
-                            window.location.reload();
+                            const newEx = await res.json();
+                            setNewExhibitImg('');
+                            document.getElementById('new_exhibit_title').value = '';
+                            document.getElementById('new_exhibit_desc').value = '';
+                            setExhibitsList(prev => [...prev, { id: newEx.id || Date.now(), title, description, image }]);
                           } else {
                             alert('Failed to add exhibit');
                           }
@@ -1176,7 +1273,7 @@ export default function AdminPage() {
                   try {
                     const res = await fetch(`${API_URL}/api/site-translations`, {
                       method: 'PUT',
-                      headers: { 'Content-Type': 'application/json' },
+                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                       body: JSON.stringify(siteTranslations)
                     });
                     if (res.ok) {
@@ -1210,11 +1307,12 @@ export default function AdminPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               {(() => {
-                const filtered = siteTranslations.filter(item => 
-                  item.key.toLowerCase().includes(translationsSearchQuery.toLowerCase()) ||
-                  item.uz.toLowerCase().includes(translationsSearchQuery.toLowerCase()) ||
-                  item.ru.toLowerCase().includes(translationsSearchQuery.toLowerCase()) ||
-                  item.en.toLowerCase().includes(translationsSearchQuery.toLowerCase())
+                const q = translationsSearchQuery.toLowerCase();
+                const filtered = siteTranslations.filter(item =>
+                  (item.key || '').toLowerCase().includes(q) ||
+                  (item.uz || '').toLowerCase().includes(q) ||
+                  (item.ru || '').toLowerCase().includes(q) ||
+                  (item.en || '').toLowerCase().includes(q)
                 );
                 
                 if (filtered.length === 0) {
@@ -1302,50 +1400,321 @@ export default function AdminPage() {
           </div>
         )}
 
+        {/* NEWS & EVENTS TAB */}
+        {activeTab === 'news_events' && (
+          <div style={{ animation: 'fhFade .3s ease both' }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, margin: '0 0 6px', color: 'var(--fg)' }}>Новости & Афиша</h1>
+                <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15 }}>Управляйте публикациями и событиями всех музеев.</p>
+              </div>
+              {/* Lang switcher */}
+              <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--surface2)', borderRadius: 99 }}>
+                {['uz', 'ru', 'en'].map(l => (
+                  <button key={l} onClick={() => setNeLang(l)} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: 'none', padding: '7px 16px', borderRadius: 99, fontSize: 12, fontWeight: 700, letterSpacing: '.06em', background: neLang === l ? 'var(--accent)' : 'transparent', color: neLang === l ? 'var(--accent-fg)' : 'var(--muted)', transition: 'all .2s' }}>{l.toUpperCase()}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Sub-tabs */}
+            <div style={{ display: 'flex', gap: 2, borderBottom: '1px solid var(--line)', marginBottom: 32 }}>
+              {[['news', 'Новости'], ['events', 'Афиша событий']].map(([id, label]) => (
+                <button key={id} onClick={() => setNeSubTab(id)} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', background: 'transparent', border: 'none', borderBottom: neSubTab === id ? '2px solid var(--accent)' : '2px solid transparent', padding: '10px 22px', fontSize: 14.5, fontWeight: neSubTab === id ? 700 : 400, color: neSubTab === id ? 'var(--fg)' : 'var(--muted)', transition: 'all .2s', marginBottom: -1 }}>{label}</button>
+              ))}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 32, alignItems: 'start' }}>
+
+              {/* LEFT: LIST */}
+              <div>
+                {neLoading && <div style={{ color: 'var(--muted)', padding: 20 }}>Загрузка…</div>}
+
+                {/* NEWS LIST */}
+                {!neLoading && neSubTab === 'news' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {allNewsGlobal.length === 0 && (
+                      <div style={{ border: '1px dashed var(--line)', borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--muted)' }}>Новостей пока нет</div>
+                    )}
+                    {allNewsGlobal.map(n => (
+                      <div key={n.id} style={{ display: 'flex', gap: 16, alignItems: 'flex-start', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: 20, position: 'relative' }}>
+                        <div style={{ width: 4, position: 'absolute', left: 0, top: 0, bottom: 0, background: 'var(--accent)', borderRadius: '12px 0 0 12px' }} />
+                        {n.image && (
+                          <div style={{ width: 72, height: 52, borderRadius: 8, overflow: 'hidden', flexShrink: 0, border: '1px solid var(--line)' }}>
+                            <img src={`${API_URL}${n.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                          </div>
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 5 }}>
+                            <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-fg)' }}>{n.museum_name || 'Все музеи'}</span>
+                            <span style={{ fontSize: 12, color: 'var(--muted)' }}>{n.created_at ? new Date(n.created_at).toLocaleDateString('ru-RU') : ''}</span>
+                          </div>
+                          <div style={{ fontFamily: 'var(--font-head)', fontSize: 17, fontWeight: 600, color: 'var(--fg)', marginBottom: 4 }}>{n.title || '—'}</div>
+                          <div style={{ fontSize: 13, color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{n.content}</div>
+                        </div>
+                        <button onClick={async () => {
+                          if (!window.confirm('Удалить эту новость?')) return;
+                          try {
+                            const res = await fetch(`${API_URL}/api/museums/${n.museum_id}/news/${n.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                            if (res.ok) setAllNewsGlobal(prev => prev.filter(x => x.id !== n.id));
+                            else alert('Не удалось удалить');
+                          } catch (e) { console.error(e); }
+                        }} style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}>
+                          Удалить
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* EVENTS LIST */}
+                {!neLoading && neSubTab === 'events' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {allEventsGlobal.length === 0 && (
+                      <div style={{ border: '1px dashed var(--line)', borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--muted)' }}>Событий пока нет</div>
+                    )}
+                    {allEventsGlobal.map(e => {
+                      const p = (e.date || '').split('-');
+                      const day = p[2] ? String(+p[2]) : '?';
+                      const mon = ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'][+p[1] - 1] || '';
+                      return (
+                        <div key={e.id} style={{ display: 'grid', gridTemplateColumns: '56px 1fr auto', gap: 16, alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, padding: '16px 20px', position: 'relative' }}>
+                          <div style={{ width: 4, position: 'absolute', left: 0, top: 0, bottom: 0, background: 'var(--accent)', borderRadius: '12px 0 0 12px' }} />
+                          <div style={{ textAlign: 'center', borderRight: '1px solid var(--line)', paddingRight: 12 }}>
+                            <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 28, color: 'var(--accent)', lineHeight: 1 }}>{day}</div>
+                            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginTop: 2 }}>{mon}</div>
+                          </div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 4, flexWrap: 'wrap' }}>
+                              <span style={{ fontFamily: 'var(--font-ui)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', textTransform: 'uppercase', padding: '3px 9px', borderRadius: 99, background: 'var(--accent)', color: 'var(--accent-fg)' }}>{e.museum_name || 'Все музеи'}</span>
+                              {e.time && <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{e.time}</span>}
+                            </div>
+                            <div style={{ fontFamily: 'var(--font-head)', fontSize: 17, fontWeight: 600, color: 'var(--fg)', marginBottom: 3 }}>{e.title || '—'}</div>
+                            <div style={{ fontSize: 13, color: 'var(--muted)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{e.description}</div>
+                          </div>
+                          <button onClick={async () => {
+                            if (!window.confirm('Удалить это событие?')) return;
+                            try {
+                              const res = await fetch(`${API_URL}/api/museums/${e.museum_id}/events/${e.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                              if (res.ok) setAllEventsGlobal(prev => prev.filter(x => x.id !== e.id));
+                              else alert('Не удалось удалить');
+                            } catch (e2) { console.error(e2); }
+                          }} style={{ flexShrink: 0, padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer', alignSelf: 'flex-start' }}>
+                            Удалить
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT: ADD FORM */}
+              <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', padding: 28, position: 'sticky', top: 24 }}>
+
+                {/* ADD NEWS FORM */}
+                {neSubTab === 'news' && (
+                  <>
+                    <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 22, margin: '0 0 22px', color: 'var(--fg)' }}>Добавить новость</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Музей</label>
+                        <select value={neMuseumId} onChange={e => setNeMuseumId(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none' }}>
+                          <option value="">— Выберите музей —</option>
+                          {allowedMuseums.map(m => (
+                            <option key={m.id} value={m.id}>{(m[neLang] || m.ru || m.uz || {}).name || m.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Заголовок *</label>
+                        <input type="text" value={newsForm.title} onChange={e => setNewsForm(f => ({ ...f, title: e.target.value }))} placeholder="Заголовок новости" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Текст новости</label>
+                        <textarea value={newsForm.content} onChange={e => setNewsForm(f => ({ ...f, content: e.target.value }))} rows={4} placeholder="Подробности…" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Фото</label>
+                        <input type="file" accept="image/*" onChange={e => handleImageUpload(e, url => setNewsForm(f => ({ ...f, image: url })))} style={{ fontSize: 13 }} />
+                        {newsForm.image && <div style={{ fontSize: 12, color: 'var(--accent)', marginTop: 6 }}>✓ Загружено</div>}
+                      </div>
+                      <button onClick={async () => {
+                        if (!neMuseumId) return alert('Выберите музей');
+                        if (!newsForm.title) return alert('Введите заголовок');
+                        try {
+                          const res = await fetch(`${API_URL}/api/museums/${neMuseumId}/news?lang=${neLang}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ title: newsForm.title, content: newsForm.content, image: newsForm.image })
+                          });
+                          if (res.ok) {
+                            setNewsForm({ title: '', content: '', image: '' });
+                            await fetchAllNewsEvents();
+                          } else alert('Ошибка при сохранении');
+                        } catch (e) { console.error(e); }
+                      }} className="btn-primary" style={{ padding: '12px', fontSize: 14, width: '100%' }}>
+                        Опубликовать новость
+                      </button>
+                    </div>
+                  </>
+                )}
+
+                {/* ADD EVENT FORM */}
+                {neSubTab === 'events' && (
+                  <>
+                    <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 22, margin: '0 0 22px', color: 'var(--fg)' }}>Добавить событие</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Музей</label>
+                        <select value={neMuseumId} onChange={e => setNeMuseumId(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none' }}>
+                          <option value="">— Выберите музей —</option>
+                          {allowedMuseums.map(m => (
+                            <option key={m.id} value={m.id}>{(m[neLang] || m.ru || m.uz || {}).name || m.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Название *</label>
+                        <input type="text" value={eventsForm.title} onChange={e => setEventsForm(f => ({ ...f, title: e.target.value }))} placeholder="Название события" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Дата *</label>
+                          <input type="date" value={eventsForm.date} onChange={e => setEventsForm(f => ({ ...f, date: e.target.value }))} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Время</label>
+                          <input type="time" value={eventsForm.time} onChange={e => setEventsForm(f => ({ ...f, time: e.target.value }))} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Описание</label>
+                        <textarea value={eventsForm.description} onChange={e => setEventsForm(f => ({ ...f, description: e.target.value }))} rows={4} placeholder="Описание события…" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                      </div>
+                      <button onClick={async () => {
+                        if (!neMuseumId) return alert('Выберите музей');
+                        if (!eventsForm.title || !eventsForm.date) return alert('Введите название и дату');
+                        try {
+                          const res = await fetch(`${API_URL}/api/museums/${neMuseumId}/events?lang=${neLang}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                            body: JSON.stringify({ title: eventsForm.title, description: eventsForm.description, date: eventsForm.date, time: eventsForm.time })
+                          });
+                          if (res.ok) {
+                            setEventsForm({ title: '', description: '', date: '', time: '' });
+                            await fetchAllNewsEvents();
+                          } else alert('Ошибка при сохранении');
+                        } catch (e) { console.error(e); }
+                      }} className="btn-primary" style={{ padding: '12px', fontSize: 14, width: '100%' }}>
+                        Добавить в афишу
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* ADMINS MANAGEMENT TAB */}
         {activeTab === 'admins' && user?.role === 'super_admin' && (
           <div style={{ animation: 'fhFade .3s ease both' }}>
             <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 32, margin: '0 0 24px', color: 'var(--fg)' }}>Admin User Accounts</h1>
-            
+
+            {/* Superadmin credentials card */}
+            <div style={{ background: 'color-mix(in srgb, var(--accent) 10%, var(--surface))', border: '1px solid color-mix(in srgb, var(--accent) 40%, transparent)', borderRadius: 14, padding: '20px 28px', marginBottom: 32, display: 'flex', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: 18, flexShrink: 0 }}>S</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--accent)', fontWeight: 700, marginBottom: 4 }}>Суперадмин — ваш главный аккаунт</div>
+                <div style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 15, color: 'var(--fg)' }}>Логин: <strong style={{ fontFamily: 'monospace' }}>superadmin</strong></span>
+                  <span style={{ fontSize: 15, color: 'var(--fg)' }}>Пароль: <strong style={{ fontFamily: 'monospace' }}>superpassword</strong></span>
+                </div>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 220 }}>Этот аккаунт нельзя удалить. Смените пароль через SSH если нужно.</div>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 32, alignItems: 'start' }}>
               {/* ADMINS LIST */}
               <div style={{ background: 'var(--surface)', borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', padding: 32 }}>
-                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, margin: '0 0 20px', color: 'var(--fg)' }}>Active Admin Logins</h2>
+                <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, margin: '0 0 20px', color: 'var(--fg)' }}>Активные аккаунты</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {adminsList.map(adm => (
-                    <div key={adm.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 20, background: 'var(--surface2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--fg)' }}>{adm.username}</div>
-                        <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4 }}>Role: {adm.role}</div>
-                        <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 4 }}>
-                          Managed: {adm.museums.length > 0 ? adm.museums.join(', ') : 'None'}
+                    <div key={adm.id} style={{ border: '1px solid var(--line)', borderRadius: 12, padding: 20, background: 'var(--surface2)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--fg)', fontFamily: 'monospace' }}>{adm.username}</div>
+                          <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>Роль: {adm.role}</div>
+                          <div style={{ fontSize: 13, color: 'var(--accent)', marginTop: 2 }}>
+                            Музеи: {adm.museums.length > 0 ? adm.museums.join(', ') : 'Не назначены'}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                          <button
+                            onClick={() => { setResetPasswordId(adm.id); setResetPasswordValue(''); setShowResetPassword(false); }}
+                            style={{ padding: '6px 12px', fontSize: 12, background: 'var(--surface)', border: '1px solid var(--line)', color: 'var(--fg)', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            Сбросить пароль
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (window.confirm(`Удалить аккаунт "${adm.username}"?`)) {
+                                try {
+                                  const res = await fetch(`${API_URL}/api/auth/admins/${adm.id}`, {
+                                    method: 'DELETE',
+                                    headers: { 'Authorization': `Bearer ${token}` }
+                                  });
+                                  if (res.ok) setAdminsList(prev => prev.filter(x => x.id !== adm.id));
+                                  else alert('Не удалось удалить');
+                                } catch (e) { console.error(e); }
+                              }
+                            }}
+                            style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}
+                          >
+                            Удалить
+                          </button>
                         </div>
                       </div>
-                      <button 
-                        onClick={async () => {
-                          if (window.confirm(`Are you sure you want to delete admin account "${adm.username}"?`)) {
-                            try {
-                              const res = await fetch(`${API_URL}/api/auth/admins/${adm.id}`, {
-                                method: 'DELETE',
-                                headers: { 'Authorization': `Bearer ${token}` }
-                              });
-                              if (res.ok) {
-                                setAdminsList(prev => prev.filter(x => x.id !== adm.id));
-                              } else {
-                                alert('Failed to delete admin');
-                              }
-                            } catch (e) {
-                              console.error(e);
-                            }
-                          }
-                        }}
-                        style={{ padding: '6px 12px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}
-                      >
-                        Delete Account
-                      </button>
+                      {/* Inline reset password form */}
+                      {resetPasswordId === adm.id && (
+                        <div style={{ marginTop: 16, padding: 16, background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--line)' }}>
+                          <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 10 }}>Новый пароль для {adm.username}</div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                            <div style={{ position: 'relative', flex: 1 }}>
+                              <input
+                                type={showResetPassword ? 'text' : 'password'}
+                                value={resetPasswordValue}
+                                onChange={e => setResetPasswordValue(e.target.value)}
+                                placeholder="Введите новый пароль"
+                                style={{ width: '100%', padding: '9px 70px 9px 12px', borderRadius: 7, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                              />
+                              <button type="button" onClick={() => setShowResetPassword(p => !p)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 12 }}>
+                                {showResetPassword ? 'Скрыть' : 'Показать'}
+                              </button>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                if (!resetPasswordValue) return alert('Введите пароль');
+                                const res = await fetch(`${API_URL}/api/auth/admins/${adm.id}/password`, {
+                                  method: 'PATCH',
+                                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                  body: JSON.stringify({ password: resetPasswordValue })
+                                });
+                                if (res.ok) { setResetPasswordId(null); setResetPasswordValue(''); alert(`Пароль для "${adm.username}" обновлён`); }
+                                else alert('Ошибка сброса пароля');
+                              }}
+                              style={{ padding: '9px 16px', fontSize: 13, background: 'var(--accent)', border: 'none', color: 'var(--accent-fg)', borderRadius: 7, cursor: 'pointer', fontWeight: 600, whiteSpace: 'nowrap' }}
+                            >
+                              Сохранить
+                            </button>
+                            <button onClick={() => setResetPasswordId(null)} style={{ padding: '9px 12px', fontSize: 13, background: 'var(--surface2)', border: '1px solid var(--line)', color: 'var(--muted)', borderRadius: 7, cursor: 'pointer' }}>✕</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
-                  {adminsList.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 14 }}>No other admin accounts created yet.</div>}
+                  {adminsList.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 14 }}>Других аккаунтов пока нет.</div>}
                 </div>
               </div>
 
@@ -1398,7 +1767,12 @@ export default function AdminPage() {
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 6 }}>Password</label>
-                      <input name="password" type="password" required placeholder="Enter password" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                      <div style={{ position: 'relative' }}>
+                        <input name="password" type={showAdminPassword ? 'text' : 'password'} required placeholder="Enter password" style={{ width: '100%', padding: '10px 44px 10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none', boxSizing: 'border-box' }} />
+                        <button type="button" onClick={() => setShowAdminPassword(p => !p)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--muted)', fontSize: 13, fontWeight: 600, padding: 0 }}>
+                          {showAdminPassword ? 'Скрыть' : 'Показать'}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Assign Managed Museums</label>
@@ -1416,6 +1790,151 @@ export default function AdminPage() {
                 </form>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* EXPOSITION TAB */}
+        {activeTab === 'exposition' && (
+          <div style={{ animation: 'fhFade .3s ease both' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 36, margin: '0 0 6px', color: 'var(--fg)' }}>Экспозиция</h1>
+                <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15 }}>Управляйте фотографиями и описаниями экспозиций музеев.</p>
+              </div>
+              <div style={{ display: 'flex', gap: 4, padding: 4, background: 'var(--surface2)', borderRadius: 99 }}>
+                {['uz', 'ru', 'en'].map(l => (
+                  <button key={l} onClick={() => setExpoLang(l)} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: 'none', padding: '7px 16px', borderRadius: 99, fontSize: 12, fontWeight: 700, letterSpacing: '.06em', background: expoLang === l ? 'var(--accent)' : 'transparent', color: expoLang === l ? 'var(--accent-fg)' : 'var(--muted)', transition: 'all .2s' }}>{l.toUpperCase()}</button>
+                ))}
+              </div>
+            </div>
+
+            {/* Museum selector */}
+            <div style={{ marginBottom: 32 }}>
+              <label style={{ display: 'block', fontSize: 12, textTransform: 'uppercase', letterSpacing: '.1em', color: 'var(--muted)', marginBottom: 8 }}>Выберите музей</label>
+              <select value={expoMuseumId} onChange={e => { setExpoMuseumId(e.target.value); setExpoEditId(null); }} style={{ padding: '12px 16px', borderRadius: 10, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 15, minWidth: 320, outline: 'none' }}>
+                <option value="">— выберите музей —</option>
+                {allowedMuseums.map(m => (
+                  <option key={m.id} value={m.id}>{(m[lang] || m.uz || {}).name || m.id}</option>
+                ))}
+              </select>
+            </div>
+
+            {expoMuseumId && (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: 32, alignItems: 'start' }}>
+
+                {/* LEFT: Photo grid */}
+                <div>
+                  {expoLoading && <div style={{ color: 'var(--muted)', padding: 20 }}>Загрузка…</div>}
+                  {!expoLoading && expoExhibits.length === 0 && (
+                    <div style={{ border: '1px dashed var(--line)', borderRadius: 'var(--radius)', padding: '48px 24px', textAlign: 'center', color: 'var(--muted)' }}>
+                      Фотографий экспозиции пока нет
+                    </div>
+                  )}
+                  {!expoLoading && expoExhibits.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 16 }}>
+                      {expoExhibits.map(ex => (
+                        <div key={ex.id} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
+                          {ex.image && (
+                            <div style={{ height: 150, overflow: 'hidden', background: 'var(--surface2)' }}>
+                              <img src={`${API_URL}${ex.image}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            </div>
+                          )}
+                          <div style={{ padding: 14 }}>
+                            {ex.hall_num && (
+                              <span style={{ fontSize: 10, letterSpacing: '.15em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 700, marginBottom: 4, display: 'block' }}>Зал {ex.hall_num}</span>
+                            )}
+                            {expoEditId === ex.id ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <input value={expoEditTitle} onChange={e => setExpoEditTitle(e.target.value)} placeholder="Название" style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 13, width: '100%' }} />
+                                <textarea value={expoEditDesc} onChange={e => setExpoEditDesc(e.target.value)} placeholder="Описание" rows={2} style={{ padding: '7px 10px', borderRadius: 6, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 13, width: '100%', resize: 'vertical' }} />
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                  <button onClick={async () => {
+                                    const res = await fetch(`${API_URL}/api/museums/${expoMuseumId}/exhibits/${ex.id}`, {
+                                      method: 'PUT',
+                                      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                                      body: JSON.stringify({ title: expoEditTitle, description: expoEditDesc, image: ex.image })
+                                    });
+                                    if (res.ok) {
+                                      setExpoExhibits(prev => prev.map(x => x.id === ex.id ? { ...x, title: expoEditTitle, description: expoEditDesc } : x));
+                                      setExpoEditId(null);
+                                    } else alert('Ошибка сохранения');
+                                  }} style={{ flex: 1, padding: '6px 0', fontSize: 12, background: 'var(--accent)', border: 'none', color: 'var(--accent-fg)', borderRadius: 6, cursor: 'pointer', fontWeight: 600 }}>Сохранить</button>
+                                  <button onClick={() => setExpoEditId(null)} style={{ padding: '6px 10px', fontSize: 12, background: 'var(--surface2)', border: '1px solid var(--line)', color: 'var(--muted)', borderRadius: 6, cursor: 'pointer' }}>✕</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--fg)', marginBottom: 2 }}>{ex.title || '—'}</div>
+                                <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{ex.description}</div>
+                                <div style={{ display: 'flex', gap: 6 }}>
+                                  <button onClick={() => { setExpoEditId(ex.id); setExpoEditTitle(ex.title || ''); setExpoEditDesc(ex.description || ''); }} style={{ flex: 1, padding: '6px 0', fontSize: 12, background: 'var(--surface2)', border: '1px solid var(--line)', color: 'var(--fg)', borderRadius: 6, cursor: 'pointer' }}>Изменить</button>
+                                  <button onClick={async () => {
+                                    if (!window.confirm('Удалить фото?')) return;
+                                    const res = await fetch(`${API_URL}/api/museums/${expoMuseumId}/exhibits/${ex.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
+                                    if (res.ok) setExpoExhibits(prev => prev.filter(x => x.id !== ex.id));
+                                    else alert('Ошибка удаления');
+                                  }} style={{ padding: '6px 10px', fontSize: 12, background: 'transparent', border: '1px solid #D32F2F', color: '#D32F2F', borderRadius: 6, cursor: 'pointer' }}>✕</button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* RIGHT: Add form */}
+                <div style={{ background: 'var(--surface)', borderRadius: 16, border: '1px solid var(--line)', padding: 28, position: 'sticky', top: 24 }}>
+                  <h3 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 20px', color: 'var(--fg)' }}>Добавить фото</h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Фотография</label>
+                      {expoAddImg && (
+                        <div style={{ marginBottom: 10, borderRadius: 8, overflow: 'hidden', height: 120 }}>
+                          <img src={`${API_URL}${expoAddImg}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      )}
+                      <input type="file" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        const res = await fetch(`${API_URL}/api/upload`, { method: 'POST', body: fd });
+                        if (res.ok) { const d = await res.json(); setExpoAddImg(d.url); }
+                      }} style={{ fontSize: 13, width: '100%' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Название (необязательно)</label>
+                      <input id="expo_add_title" type="text" placeholder="Название экспоната" style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 6 }}>Описание (необязательно)</label>
+                      <textarea id="expo_add_desc" rows={3} placeholder="Описание экспоната..." style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface2)', color: 'var(--fg)', fontSize: 14, resize: 'vertical', outline: 'none' }} />
+                    </div>
+                    <button onClick={async () => {
+                      if (!expoAddImg) return alert('Сначала загрузите фотографию');
+                      const title = document.getElementById('expo_add_title').value;
+                      const description = document.getElementById('expo_add_desc').value;
+                      const res = await fetch(`${API_URL}/api/museums/${expoMuseumId}/exhibits?lang=${expoLang}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ title, description, image: expoAddImg })
+                      });
+                      if (res.ok) {
+                        const newEx = await res.json();
+                        setExpoExhibits(prev => [...prev, { id: newEx.id || Date.now(), title, description, image: expoAddImg }]);
+                        setExpoAddImg('');
+                        document.getElementById('expo_add_title').value = '';
+                        document.getElementById('expo_add_desc').value = '';
+                      } else {
+                        alert('Ошибка добавления фото');
+                      }
+                    }} className="btn-primary" style={{ padding: '12px 0', fontSize: 14, width: '100%' }}>Добавить в экспозицию</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

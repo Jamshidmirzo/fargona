@@ -14,8 +14,8 @@ export default function ExpositionPlayer({ museum, onExit }) {
       allExhibits.push({
         hallTitle: ex.title || 'Exhibition Object',
         hallSubtitle: ex.description || '',
-        exhibitTitle: ex.title || 'Artifact',
-        hallIndex: idx + 1,
+        exhibitTitle: ex.title || '',
+        hallIndex: ex.hall_num || (idx + 1),
         imgSrc: ex.image ? `${API_URL}${ex.image}` : `${API_URL}/uploads/image${(idx % 12) + 1}.jpeg`,
         fallbackSrc: `${API_URL}/uploads/image${(idx % 12) + 1}.png`
       });
@@ -81,14 +81,14 @@ export default function ExpositionPlayer({ museum, onExit }) {
   // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'ArrowRight') handleNext();
-      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') setCurrentIndex(i => Math.min(i + 1, total - 1));
+      if (e.key === 'ArrowLeft') setCurrentIndex(i => Math.max(i - 1, 0));
       if (e.key === 'Escape') onExit();
       if (e.key === ' ') setIsPlaying(p => !p);
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [total, onExit]);
 
   const handleNext = () => {
     if (currentIndex < total - 1) {
@@ -104,7 +104,12 @@ export default function ExpositionPlayer({ museum, onExit }) {
     }
   };
 
-  if (total === 0) return null;
+  if (total === 0) return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: '#000', color: '#fff', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 24 }}>
+      <div style={{ fontFamily: 'var(--font-ui)', fontSize: 16, color: 'rgba(255,255,255,0.6)' }}>Экспозиция пока не добавлена</div>
+      <button onClick={onExit} style={{ background: 'var(--accent)', border: 'none', color: '#fff', padding: '12px 28px', borderRadius: 99, cursor: 'pointer', fontFamily: 'var(--font-ui)', fontSize: 14, fontWeight: 600 }}>Закрыть</button>
+    </div>
+  );
   const current = allExhibits[currentIndex];
 
   return (
@@ -174,9 +179,11 @@ export default function ExpositionPlayer({ museum, onExit }) {
           {current.exhibitTitle}
         </h1>
         
-        <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, animation: 'slideUp .6s .2s ease both' }} key={`desc-${currentIndex}`}>
-          {current.hallSubtitle} Imagine standing right here, surrounded by the echoes of history. The artifacts speak of a time long past, meticulously preserved for the future.
-        </p>
+        {current.hallSubtitle && (
+          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, animation: 'slideUp .6s .2s ease both' }} key={`desc-${currentIndex}`}>
+            {current.hallSubtitle}
+          </p>
+        )}
 
         {/* Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 48, animation: 'slideUp .6s .3s ease both' }}>

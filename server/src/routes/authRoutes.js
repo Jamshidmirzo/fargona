@@ -9,6 +9,7 @@ router.post('/login', authController.login);
 router.get('/admins', verifyToken, requireRole('super_admin'), authController.listAdmins);
 router.post('/admins', verifyToken, requireRole('super_admin'), authController.createAdmin);
 router.put('/admins/:id', verifyToken, requireRole('super_admin'), authController.updateAdminMuseums);
+router.patch('/admins/:id/password', verifyToken, requireRole('super_admin'), authController.resetAdminPassword);
 router.delete('/admins/:id', verifyToken, requireRole('super_admin'), authController.deleteAdmin);
 
 module.exports = router;

@@ -45,7 +45,7 @@ exports.login = (req, res) => {
 
 exports.listAdmins = (req, res) => {
   try {
-    const admins = db.prepare('SELECT id, username, role FROM admins WHERE role != "super_admin"').all();
+    const admins = db.prepare("SELECT id, username, role FROM admins WHERE role != 'super_admin'").all();
     const result = admins.map(a => {
       const museumsRows = db.prepare('SELECT museum_id FROM admin_museums WHERE admin_id = ?').all(a.id);
       return {
@@ -113,6 +113,21 @@ exports.updateAdminMuseums = (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update admin assignments' });
+  }
+};
+
+exports.resetAdminPassword = (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'Password is required' });
+    const hash = bcrypt.hashSync(password, 10);
+    const result = db.prepare("UPDATE admins SET password_hash = ? WHERE id = ? AND role != 'super_admin'").run(hash, id);
+    if (result.changes === 0) return res.status(404).json({ error: 'Admin not found or cannot reset super_admin' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to reset password' });
   }
 };
 

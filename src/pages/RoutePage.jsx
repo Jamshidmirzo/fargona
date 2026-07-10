@@ -112,22 +112,22 @@ export default function RoutePage() {
       {/* Smart Route Action Bar */}
       <div style={{ background: 'color-mix(in srgb, var(--accent) 8%, transparent)', border: '1px solid color-mix(in srgb, var(--accent) 20%, transparent)', borderRadius: 'var(--radius)', padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 40, animation: 'fhRise .5s ease' }}>
         <div>
-          <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, margin: '0 0 8px', color: 'var(--fg)' }}>Smart GPS Tourist Guide</h2>
-          <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15, maxWidth: 400 }}>Let our algorithm build the perfect optimal route starting directly from your physical location.</p>
+          <h2 style={{ fontFamily: 'var(--font-head)', fontSize: 24, margin: '0 0 8px', color: 'var(--fg)' }}>{t.smartGpsTitle}</h2>
+          <p style={{ margin: 0, color: 'var(--muted)', fontSize: 15, maxWidth: 400 }}>{t.smartGpsText}</p>
           {gpsError && <div style={{ color: '#D32F2F', fontSize: 13, marginTop: 8, fontWeight: 600 }}>{gpsError}</div>}
         </div>
-        <button 
-          onClick={buildSmartRoute} 
+        <button
+          onClick={buildSmartRoute}
           disabled={isLocating}
-          className="btn-primary" 
+          className="btn-primary"
           style={{ padding: '16px 28px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 10, position: 'relative', overflow: 'hidden' }}
         >
           {isLocating ? (
-            <span style={{ animation: 'pulse 1s infinite' }}>Locating...</span>
+            <span style={{ animation: 'pulse 1s infinite' }}>{t.locating}</span>
           ) : (
             <>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
-              Build Optimal Route
+              {t.buildOptimalRoute}
             </>
           )}
         </button>
@@ -135,7 +135,7 @@ export default function RoutePage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 40, alignItems: 'start' }}>
         <div>
-          <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 20, color: 'var(--fg)', margin: '0 0 16px' }}>{t.allMuseums}</h3>
+          <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 20, color: 'var(--fg)', margin: '0 0 16px' }}>{t.allMuseums || 'Все музеи'}</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {museums.map(m => {
               const inRoute = routeIds.includes(m.id);
@@ -157,12 +157,12 @@ export default function RoutePage() {
         <div style={{ position: 'sticky', top: 80 }}>
           <div style={{ background: 'var(--surface2)', border: '1px solid var(--line)', borderRadius: 'calc(var(--radius) * 1.5)', padding: '36px 32px' }}>
             <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 24, color: 'var(--fg)', margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <span>{t.yourRoute}</span>
+              <span>{t.yourRoute || 'Маршрут'}</span>
               <span style={{ fontSize: 15, fontFamily: 'var(--font-ui)', fontWeight: 600, background: 'var(--accent)', color: 'var(--accent-fg)', padding: '2px 10px', borderRadius: 99 }}>{routeIds.length}</span>
             </h3>
 
             {routeIds.length === 0 ? (
-              <div style={{ color: 'var(--muted)', fontSize: 15, fontStyle: 'italic' }}>{t.selectToBuild}</div>
+              <div style={{ color: 'var(--muted)', fontSize: 15, fontStyle: 'italic' }}>{t.selectToBuild || 'Выберите музеи слева'}</div>
             ) : (
               <>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 32 }}>
@@ -172,8 +172,8 @@ export default function RoutePage() {
                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
                        </div>
                        <div>
-                         <div style={{ fontSize: 14.5, color: 'var(--fg)', fontWeight: 600 }}>Your Location</div>
-                         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>GPS Start Point</div>
+                         <div style={{ fontSize: 14.5, color: 'var(--fg)', fontWeight: 600 }}>{t.yourLocation}</div>
+                         <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>{t.gpsStartPoint}</div>
                        </div>
                     </div>
                   )}

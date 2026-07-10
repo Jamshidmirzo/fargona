@@ -14,7 +14,8 @@ export default function Header() {
     { to: '/timeline', label: t.nav.timeline },
     { to: '/route', label: t.nav.route },
     { to: '/saved', label: t.nav.saved },
-    { to: '/passport', label: t.nav.passport },
+    { to: '/news', label: t.nav.news },
+    { to: '/events', label: t.nav.events },
   ];
 
   const segStyle = (active) => ({

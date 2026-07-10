@@ -33,7 +33,7 @@ exports.getAllMuseums = (req, res) => {
     });
 
     // Fetch all exhibits for the language and group by museum_id
-    const exhibitsStmt = db.prepare('SELECT id, museum_id, title, desc AS description, image_url AS image FROM exhibits WHERE lang = ?');
+    const exhibitsStmt = db.prepare('SELECT id, museum_id, hall_num, title, desc AS description, image_url AS image FROM exhibits WHERE lang = ?');
     const allExhibits = exhibitsStmt.all(lang);
 
     const exhibitsByMuseum = {};
@@ -41,10 +41,10 @@ exports.getAllMuseums = (req, res) => {
       if (!exhibitsByMuseum[ex.museum_id]) exhibitsByMuseum[ex.museum_id] = [];
       exhibitsByMuseum[ex.museum_id].push({
         id: ex.id,
+        hall_num: ex.hall_num,
         title: ex.title,
         description: ex.description,
-        image: ex.image,
-        audio: ex.audio
+        image: ex.image
       });
     });
     
@@ -108,7 +108,7 @@ exports.getMuseumById = (req, res) => {
     const allQuizzes = quizzesStmt.all(id, lang);
     const quiz = allQuizzes.map(q => ({ id: q.id, q: q.q, options: JSON.parse(q.options), a: q.a }));
 
-    const exhibitsStmt = db.prepare('SELECT id, title, desc AS description, image_url AS image FROM exhibits WHERE museum_id = ? AND lang = ?');
+    const exhibitsStmt = db.prepare('SELECT id, hall_num, title, desc AS description, image_url AS image FROM exhibits WHERE museum_id = ? AND lang = ? ORDER BY hall_num, id');
     const exhibits = exhibitsStmt.all(id, lang);
     
     const result = {
@@ -172,53 +172,41 @@ exports.getMuseumQuiz = (req, res) => {
 exports.updateMuseum = (req, res) => {
   try {
     const { id } = req.params;
-    const { lang = 'uz' } = req.query;
-    const { 
-      city, birth, death, established, pos_x, pos_y, lat, lon, heroImage, hero_image,
-      name, owner, role, lifespan, tagline, bio, address, founded, hours, entry, phone 
-    } = req.body;
+    const body = req.body;
+    const lat = body.lat !== undefined && body.lat !== '' ? parseFloat(body.lat) : null;
+    const lon = body.lon !== undefined && body.lon !== '' ? parseFloat(body.lon) : null;
+    const finalHeroImage = body.heroImage !== undefined ? body.heroImage : body.hero_image;
 
-    const finalHeroImage = heroImage !== undefined ? heroImage : hero_image;
-    
-    // Update main museums table
-    const stmtMuseum = db.prepare(`
-      UPDATE museums 
-      SET city = ?, birth = ?, death = ?, established = ?, pos_x = ?, pos_y = ?, lat = ?, lon = ?, hero_image = ?
-      WHERE id = ?
-    `);
-    stmtMuseum.run(
-      city || 'kokand', 
-      birth || '', 
-      death || '', 
-      established || '', 
-      pos_x !== undefined && pos_x !== '' ? parseFloat(pos_x) : null,
-      pos_y !== undefined && pos_y !== '' ? parseFloat(pos_y) : null,
-      lat !== undefined && lat !== '' ? parseFloat(lat) : null,
-      lon !== undefined && lon !== '' ? parseFloat(lon) : null,
-      finalHeroImage || null,
-      id
-    );
-    
-    // Check if translation exists first
-    const checkStmt = db.prepare('SELECT 1 FROM museum_translations WHERE museum_id = ? AND lang = ?');
-    const exists = checkStmt.get(id, lang);
-    
-    if (exists) {
-      const stmt = db.prepare(`
-        UPDATE museum_translations 
-        SET name = ?, owner = ?, role = ?, lifespan = ?, tagline = ?, bio = ?, address = ?, founded = ?, hours = ?, entry = ?, phone = ?
-        WHERE museum_id = ? AND lang = ?
-      `);
-      stmt.run(name || '', owner || '', role || '', lifespan || '', tagline || '', bio || '', address || '', founded || '', hours || '', entry || '', phone || '', id, lang);
-    } else {
-      const stmt = db.prepare(`
-        INSERT INTO museum_translations 
-        (museum_id, lang, name, owner, role, lifespan, tagline, bio, address, founded, hours, entry, phone)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      stmt.run(id, lang, name || '', owner || '', role || '', lifespan || '', tagline || '', bio || '', address || '', founded || '', hours || '', entry || '', phone || '');
-    }
-    
+    db.prepare(`UPDATE museums SET city=?, birth=?, death=?, established=?, lat=?, lon=?, hero_image=? WHERE id=?`)
+      .run(body.city || 'kokand', body.birth || '', body.death || '', body.established || '', lat, lon, finalHeroImage || null, id);
+
+    // Multi-lang mode when name_uz is present in body; single-lang fallback otherwise
+    const multiLang = body.name_uz !== undefined;
+    const langs = multiLang ? ['uz', 'ru', 'en'] : [req.query.lang || 'uz'];
+
+    const checkStmt = db.prepare('SELECT 1 FROM museum_translations WHERE museum_id=? AND lang=?');
+    const updateStmt = db.prepare(`UPDATE museum_translations SET name=?,owner=?,role=?,lifespan=?,tagline=?,bio=?,address=?,founded=?,hours=?,entry=?,phone=? WHERE museum_id=? AND lang=?`);
+    const insertStmt = db.prepare(`INSERT INTO museum_translations (museum_id,lang,name,owner,role,lifespan,tagline,bio,address,founded,hours,entry,phone) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+
+    db.transaction(() => {
+      for (const l of langs) {
+        const sfx = multiLang ? `_${l}` : '';
+        const vals = [
+          body[`name${sfx}`] || '', body[`owner${sfx}`] || '', body[`role${sfx}`] || '',
+          body[`lifespan${sfx}`] || '', body[`tagline${sfx}`] || '', body[`bio${sfx}`] || '',
+          body[`address${sfx}`] || '', body[`founded${sfx}`] || '', body[`hours${sfx}`] || '',
+          body[`entry${sfx}`] || '',
+          // phone is shared (not language-specific), fall back to body.phone
+          body[`phone${sfx}`] || body.phone || ''
+        ];
+        if (checkStmt.get(id, l)) {
+          updateStmt.run(...vals, id, l);
+        } else {
+          insertStmt.run(id, l, ...vals);
+        }
+      }
+    })();
+
     res.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -498,7 +486,7 @@ exports.getMuseumEvents = (req, res) => {
     const { lang = 'uz' } = req.query;
 
     const stmt = db.prepare(`
-      SELECT e.id, e.museum_id, e.image_url AS image, e.event_date AS date, e.created_at,
+      SELECT e.id, e.museum_id, e.image_url AS image, e.event_date AS date, e.event_time AS time, e.created_at,
              t.title, t.description
       FROM museum_events e
       LEFT JOIN museum_events_translations t ON e.id = t.event_id AND t.lang = ?
@@ -517,13 +505,13 @@ exports.createMuseumEvent = (req, res) => {
   try {
     const { id } = req.params; // museum_id
     const { lang = 'uz' } = req.query;
-    const { title, description, date, image } = req.body;
+    const { title, description, date, time, image } = req.body;
 
-    const insertEvent = db.prepare('INSERT INTO museum_events (museum_id, image_url, event_date) VALUES (?, ?, ?)');
+    const insertEvent = db.prepare('INSERT INTO museum_events (museum_id, image_url, event_date, event_time) VALUES (?, ?, ?, ?)');
     const insertTrans = db.prepare('INSERT INTO museum_events_translations (event_id, lang, title, description) VALUES (?, ?, ?, ?)');
 
     const transaction = db.transaction(() => {
-      const result = insertEvent.run(id, image || null, date || '');
+      const result = insertEvent.run(id, image || null, date || '', time || '');
       const eventId = result.lastInsertRowid;
       
       // Seed translations for all supported languages
@@ -553,5 +541,115 @@ exports.deleteMuseumEvent = (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to delete event' });
+  }
+};
+
+// Global news across all museums
+exports.getNewsById = (req, res) => {
+  try {
+    const { newsId } = req.params;
+    const { lang = 'ru' } = req.query;
+    const row = db.prepare(`
+      SELECT n.id, n.museum_id, n.image_url AS image, n.created_at,
+             nt.title, nt.content,
+             mt.name AS museum_name
+      FROM news n
+      LEFT JOIN news_translations nt ON n.id = nt.news_id AND nt.lang = ?
+      LEFT JOIN museum_translations mt ON n.museum_id = mt.museum_id AND mt.lang = ?
+      WHERE n.id = ?
+    `).get(lang, lang, newsId);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(row);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch news item' });
+  }
+};
+
+exports.getEventById = (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const { lang = 'ru' } = req.query;
+    const row = db.prepare(`
+      SELECT e.id, e.museum_id, e.image_url AS image, e.event_date AS date, e.event_time AS time, e.created_at,
+             et.title, et.description,
+             mt.name AS museum_name
+      FROM museum_events e
+      LEFT JOIN museum_events_translations et ON e.id = et.event_id AND et.lang = ?
+      LEFT JOIN museum_translations mt ON e.museum_id = mt.museum_id AND mt.lang = ?
+      WHERE e.id = ?
+    `).get(lang, lang, eventId);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(row);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch event' });
+  }
+};
+
+exports.getAllNews = (req, res) => {
+  try {
+    const { lang = 'uz' } = req.query;
+    const stmt = db.prepare(`
+      SELECT n.id, n.museum_id, n.image_url AS image, n.created_at,
+             nt.title, nt.content,
+             mt.name AS museum_name
+      FROM news n
+      LEFT JOIN news_translations nt ON n.id = nt.news_id AND nt.lang = ?
+      LEFT JOIN museum_translations mt ON n.museum_id = mt.museum_id AND mt.lang = ?
+      ORDER BY n.created_at DESC
+    `);
+    res.json(stmt.all(lang, lang));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch news' });
+  }
+};
+
+// Global events across all museums
+exports.getAllEvents = (req, res) => {
+  try {
+    const { lang = 'uz' } = req.query;
+    const stmt = db.prepare(`
+      SELECT e.id, e.museum_id, e.image_url AS image, e.event_date AS date, e.event_time AS time, e.created_at,
+             et.title, et.description,
+             mt.name AS museum_name
+      FROM museum_events e
+      LEFT JOIN museum_events_translations et ON e.id = et.event_id AND et.lang = ?
+      LEFT JOIN museum_translations mt ON e.museum_id = mt.museum_id AND mt.lang = ?
+      ORDER BY e.event_date ASC
+    `);
+    res.json(stmt.all(lang, lang));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+};
+
+exports.recordVisit = (req, res) => {
+  try {
+    db.prepare('INSERT INTO site_visits (visited_at) VALUES (CURRENT_TIMESTAMP)').run();
+    res.json({ success: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to record visit' });
+  }
+};
+
+exports.getVisitStats = (req, res) => {
+  try {
+    const days7 = db.prepare(`
+      SELECT DATE(visited_at) AS date, COUNT(*) AS visits
+      FROM site_visits
+      WHERE DATE(visited_at) >= DATE('now', '-6 days')
+      GROUP BY DATE(visited_at)
+      ORDER BY date ASC
+    `).all();
+    const total = db.prepare('SELECT COUNT(*) AS cnt FROM site_visits').get().cnt;
+    const today = db.prepare("SELECT COUNT(*) AS cnt FROM site_visits WHERE DATE(visited_at) = DATE('now')").get().cnt;
+    res.json({ days7, total, today });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to fetch visit stats' });
   }
 };

@@ -73,12 +73,17 @@ export default function TimelinePage() {
           fontFamily: 'var(--font-ui)', cursor: 'pointer', padding: '8px 18px', borderRadius: 99, fontSize: 14, whiteSpace: 'nowrap', border: '1px solid var(--line)', transition: 'all .2s',
           ...(selectedM === 'all' ? { background: 'var(--accent)', color: 'var(--accent-fg)', borderColor: 'var(--accent)' } : { background: 'var(--surface)', color: 'var(--fg)' })
         }}>{t.allMuseums}</button>
-        {museums.map(m => (
-          <button key={m.id} onClick={() => setSelectedM(m.id)} style={{
-            fontFamily: 'var(--font-ui)', cursor: 'pointer', padding: '8px 18px', borderRadius: 99, fontSize: 14, whiteSpace: 'nowrap', border: '1px solid var(--line)', transition: 'all .2s',
-            ...(selectedM === m.id ? { background: 'var(--accent)', color: 'var(--accent-fg)', borderColor: 'var(--accent)' } : { background: 'var(--surface)', color: 'var(--fg)' })
-          }}>{(m[lang] || m.uz || m.ru || m.en || m).owner}</button>
-        ))}
+        {museums.map(m => {
+          const loc = m[lang] || m.uz || m.ru || m.en || m;
+          const label = loc.owner || loc.name;
+          if (!label) return null;
+          return (
+            <button key={m.id} onClick={() => setSelectedM(m.id)} style={{
+              fontFamily: 'var(--font-ui)', cursor: 'pointer', padding: '8px 18px', borderRadius: 99, fontSize: 14, whiteSpace: 'nowrap', border: '1px solid var(--line)', transition: 'all .2s',
+              ...(selectedM === m.id ? { background: 'var(--accent)', color: 'var(--accent-fg)', borderColor: 'var(--accent)' } : { background: 'var(--surface)', color: 'var(--fg)' })
+            }}>{label}</button>
+          );
+        })}
       </div>
 
       <div style={{ position: 'relative', paddingLeft: 46 }}>

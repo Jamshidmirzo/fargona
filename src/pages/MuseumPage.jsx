@@ -1,12 +1,32 @@
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import LinkText from '../components/LinkText';
 import { useLang } from '../contexts/LangContext';
 import { useSaved } from '../contexts/SavedContext';
 import { CITIES, CITY_KM, epithets  } from '../data/museums';
 import { useMuseums } from '../contexts/MuseumsContext';
 import QuizPlayer from '../components/QuizPlayer';
 import ExpositionPlayer from '../components/ExpositionPlayer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { API_URL } from '../config';
+
+const MON_SHORT = {
+  ru: ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
+  uz: ['yan','fev','mar','apr','may','iyn','iyl','avg','sen','okt','noy','dek'],
+  en: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
+};
+
+function fmtDateNews(iso, lang) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso;
+  const months = {
+    ru: ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],
+    uz: ['yanvar','fevral','mart','aprel','may','iyun','iyul','avgust','sentabr','oktabr','noyabr','dekabr'],
+    en: ['January','February','March','April','May','June','July','August','September','October','November','December'],
+  };
+  const mo = (months[lang] || months.en)[d.getMonth()] || '';
+  return lang === 'en' ? `${mo} ${d.getDate()}, ${d.getFullYear()}` : `${d.getDate()} ${mo} ${d.getFullYear()}`;
+}
 
 function distKm(a, b) {
   if (a.city === b.city) return ({ kokand: 2.0, margilan: 1.2, fergana: 0.8 })[a.city] || 1.5;
@@ -15,6 +35,7 @@ function distKm(a, b) {
 }
 
 export default function MuseumPage() {
+  // ── ALL HOOKS MUST BE AT THE TOP — no early returns before this block ──
   const { museums, loading } = useMuseums();
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,31 +43,52 @@ export default function MuseumPage() {
   const { lang, t } = useLang();
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const { isSaved, toggleSave, markVisited } = useSaved();
-  if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
-
-  const museum = museums.find(m => m.id === id);
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
+
+  const museum = museums.find(m => m.id === id) || null;
+
+  const heroImages = useMemo(() => {
+    if (!museum?.heroImage) return [];
+    try {
+      return museum.heroImage.startsWith('[')
+        ? JSON.parse(museum.heroImage)
+        : [museum.heroImage];
+    } catch {
+      return [museum.heroImage];
+    }
+  }, [museum?.heroImage]);
 
   useEffect(() => {
     if (museum) markVisited(museum.id);
     window.scrollTo(0, 0);
-  }, [id, museum, markVisited]);
+  }, [id]);
 
   useEffect(() => {
-    const fetchNewsAndEvents = async () => {
+    if (!id) return;
+    const load = async () => {
       try {
-        const resNews = await fetch(`${API_URL}/api/museums/${id}/news?lang=${lang}`);
-        const resEv = await fetch(`${API_URL}/api/museums/${id}/events?lang=${lang}`);
-        if (resNews.ok) setNews(await resNews.json());
-        if (resEv.ok) setEvents(await resEv.json());
-      } catch (err) {
-        console.error(err);
-      }
+        const [rN, rE] = await Promise.all([
+          fetch(`${API_URL}/api/museums/${id}/news?lang=${lang}`),
+          fetch(`${API_URL}/api/museums/${id}/events?lang=${lang}`),
+        ]);
+        if (rN.ok) setNews(await rN.json());
+        if (rE.ok) setEvents(await rE.json());
+      } catch (_) {}
     };
-    if (id) fetchNewsAndEvents();
+    load();
   }, [id, lang]);
 
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setActiveImgIdx(prev => (prev + 1) % heroImages.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+  // ── END HOOKS ──
+
+  if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
   if (!museum) return <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)' }}>Museum not found</div>;
 
   const showQuiz = searchParams.get('quiz') === 'true';
@@ -55,50 +97,32 @@ export default function MuseumPage() {
   if (showQuiz) return <QuizPlayer museum={museum} onBack={() => setSearchParams({})} />;
   if (showVisit) return <ExpositionPlayer museum={museum} onExit={() => setSearchParams({})} />;
 
-  const loc = museum[lang] || museum.uz || museum.ru || museum.en;
-  
-  if (!loc) return <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)' }}>Loading localized data...</div>;
+  const _raw = museum[lang] || museum.uz || museum.ru || museum.en;
+  if (!_raw) return <div style={{ padding: 48, textAlign: 'center', color: 'var(--muted)' }}>Loading localized data...</div>;
+  const _fb = museum.ru || museum.en || museum.uz || {};
+  const loc = new Proxy(_raw, {
+    get(target, key) {
+      const v = target[key];
+      if (v === undefined || v === null || v === '') return _fb[key] ?? v;
+      return v;
+    }
+  });
 
   const saved = isSaved(museum.id);
   const epithet = epithets[museum.id]?.[lang] || '';
   const cityName = CITIES[museum.city]?.[lang] || '';
 
-  // Find nearest
-  let nearestName = '', nearestKm = 0;
-  let bestKm = Infinity;
+  let nearestName = '', nearestKm = 0, bestKm = Infinity;
   museums.forEach(o => {
     if (o.id === museum.id) return;
     const km = distKm(museum, o);
-    if (km < bestKm) { 
-      bestKm = km; 
+    if (km < bestKm) {
+      bestKm = km;
       const oLoc = o[lang] || o.uz || o.ru || o.en || o;
-      nearestName = oLoc.name || 'Museum'; 
-      nearestKm = Math.round(km * 10) / 10; 
+      nearestName = oLoc.name || 'Museum';
+      nearestKm = Math.round(km * 10) / 10;
     }
   });
-
-  // Parse hero images list
-  let heroImages = [];
-  try {
-    if (museum.heroImage) {
-      if (museum.heroImage.startsWith('[')) {
-        heroImages = JSON.parse(museum.heroImage);
-      } else {
-        heroImages = [museum.heroImage];
-      }
-    }
-  } catch (e) {
-    heroImages = [museum.heroImage];
-  }
-
-  // Auto slide interval
-  useEffect(() => {
-    if (heroImages.length <= 1) return;
-    const interval = setInterval(() => {
-      setActiveImgIdx(prev => (prev + 1) % heroImages.length);
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [heroImages.length]);
 
   const saveStyle = saved
     ? { background: 'var(--accent)', color: 'var(--accent-fg)', border: '1px solid var(--accent)' }
@@ -181,7 +205,7 @@ export default function MuseumPage() {
             <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
             <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>{t.biography}</h2>
           </div>
-          <p style={{ fontSize: 18, lineHeight: 1.75, color: 'var(--fg)', margin: '0 0 44px' }}>{loc.bio}</p>
+          <p style={{ fontSize: 18, lineHeight: 1.75, color: 'var(--fg)', margin: '0 0 44px' }}><LinkText text={loc.bio} /></p>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 22px' }}>
             <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
@@ -199,57 +223,57 @@ export default function MuseumPage() {
             ))}
           </div>
 
-          {/* News Updates */}
+          {/* News section — Nafis style */}
           {news.length > 0 && (
-            <div style={{ marginTop: 48 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 24px' }}>
-                <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
-                <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>
-                  {t.newsUpdates || 'Новости музея'}
-                </h2>
+            <div style={{ marginTop: 60 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 22 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 26, height: 1, background: 'var(--accent)', display: 'block' }} />
+                  <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>{t.museumNews || 'Новости музея'}</h2>
+                </div>
+                <Link to="/news" style={{ fontFamily: 'var(--font-ui)', color: 'var(--muted)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.allNewsLink || 'Все новости'} →</Link>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 16 }}>
                 {news.map(n => (
-                  <div key={n.id} style={{ display: 'flex', gap: 20, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 20, flexWrap: 'wrap' }}>
-                    {n.image && (
-                      <div style={{ width: '100%', maxWidth: 200, height: 130, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
-                        <img src={`${API_URL}${n.image}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      </div>
-                    )}
-                    <div style={{ flex: 1, minWidth: 260 }}>
-                      <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 20, margin: '0 0 8px', color: 'var(--fg)', fontWeight: 700 }}>{n.title}</h4>
-                      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>
-                        {new Date(n.created_at).toLocaleDateString(lang === 'ru' ? 'ru-RU' : lang === 'uz' ? 'uz-UZ' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
-                      </div>
-                      <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--fg)', margin: 0 }}>{n.content}</p>
-                    </div>
+                  <div key={n.id} style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '22px 24px' }}>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 9 }}>{fmtDateNews(n.created_at, lang)}</div>
+                    <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 21, lineHeight: 1.15, color: 'var(--fg)', margin: '0 0 9px' }}>{n.title}</h3>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 14.5, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}><LinkText text={n.content} /></p>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Upcoming Events */}
+          {/* Events section — Nafis style */}
           {events.length > 0 && (
-            <div style={{ marginTop: 48 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 24px' }}>
-                <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
-                <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>
-                  {t.upcomingEvents || 'События и выставки'}
-                </h2>
+            <div style={{ marginTop: 52 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 22 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 26, height: 1, background: 'var(--accent)', display: 'block' }} />
+                  <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>{t.museumEvents || 'События и выставки'}</h2>
+                </div>
+                <Link to="/events" style={{ fontFamily: 'var(--font-ui)', color: 'var(--muted)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>{t.allEventsLink || 'Все события'} →</Link>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                {events.map(ev => (
-                  <div key={ev.id} style={{ borderLeft: '3px solid var(--accent)', paddingLeft: 20, background: 'var(--surface)', border: '1px solid var(--line)', borderLeftWidth: 4, borderLeftColor: 'var(--accent)', borderRadius: 'var(--radius)', padding: 20 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', marginBottom: 8 }}>
-                      <h4 style={{ fontFamily: 'var(--font-head)', fontSize: 19, margin: 0, color: 'var(--fg)', fontWeight: 700 }}>{ev.title}</h4>
-                      <div style={{ background: 'color-mix(in srgb, var(--accent) 10%, transparent)', color: 'var(--accent)', padding: '4px 12px', borderRadius: 99, fontSize: 13, fontWeight: 600 }}>
-                        {ev.date}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {events.map(ev => {
+                  const p = (ev.date || '').split('-');
+                  const day = p[2] ? String(+p[2]) : '';
+                  const monthShort = p[1] ? (MON_SHORT[lang] || MON_SHORT.en)[+p[1] - 1] || '' : '';
+                  return (
+                    <div key={ev.id} style={{ display: 'grid', gridTemplateColumns: '78px 1fr', gap: 20, alignItems: 'center', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '18px 22px' }}>
+                      <div style={{ textAlign: 'center', borderRight: '1px solid var(--line)', paddingRight: 16 }}>
+                        <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 30, color: 'var(--accent)', lineHeight: 1 }}>{day}</div>
+                        <div style={{ fontFamily: 'var(--font-ui)', fontSize: 11, letterSpacing: '.1em', textTransform: 'uppercase', color: 'var(--muted)', marginTop: 3 }}>{monthShort}</div>
+                      </div>
+                      <div>
+                        {ev.time && <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>{ev.time}</div>}
+                        <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 600, fontSize: 20, lineHeight: 1.15, color: 'var(--fg)', margin: '0 0 5px' }}>{ev.title}</h3>
+                        <p style={{ fontFamily: 'var(--font-body)', fontSize: 14.5, lineHeight: 1.55, color: 'var(--muted)', margin: 0 }}>{ev.description}</p>
                       </div>
                     </div>
-                    <p style={{ fontSize: 15, lineHeight: 1.6, color: 'var(--muted)', margin: 0 }}>{ev.description}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
