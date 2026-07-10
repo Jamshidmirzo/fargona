@@ -223,6 +223,56 @@ export default function MuseumPage() {
             ))}
           </div>
 
+          {/* Zavqiy companion section — shown only on Muqimiy page */}
+          {museum.id === 'muqimiy' && (() => {
+            const zavqiy = museums.find(m => m.id === 'zavqiy');
+            if (!zavqiy) return null;
+            const zLoc = zavqiy[lang] || zavqiy.uz || {};
+            const zBio = (zLoc.bio || '').substring(0, 220).trimEnd();
+            const sectionLabel = { uz: 'Shu hujrada', ru: 'Также в этой хужре', en: 'Also in this complex' }[lang] || 'Также в этой хужре';
+            const moreLabel   = { uz: 'Batafsil', ru: 'Подробнее', en: 'Learn more' }[lang] || 'Подробнее';
+            const tourLabel   = { uz: 'Virtual tur', ru: 'Виртуальный тур', en: 'Virtual tour' }[lang] || 'Виртуальный тур';
+            return (
+              <div style={{ marginTop: 60, border: '1px solid var(--line)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                <div style={{ padding: '18px 28px', borderBottom: '1px solid var(--line)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <span style={{ width: 26, height: 1, background: 'var(--accent)', display: 'block' }} />
+                  <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>{sectionLabel}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr' }}>
+                  {zavqiy.heroImage && (
+                    <div style={{ overflow: 'hidden', minHeight: 220 }}>
+                      <img
+                        src={`${API_URL}${zavqiy.heroImage}`}
+                        alt={zLoc.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                  )}
+                  <div style={{ padding: '28px 30px', display: 'flex', flexDirection: 'column', gap: 0 }}>
+                    <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>{zLoc.role}</div>
+                    <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 30, lineHeight: 1.05, margin: '0 0 5px', color: 'var(--fg)' }}>{zLoc.name}</h3>
+                    <div style={{ fontSize: 14, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 16 }}>
+                      {zavqiy.birth}–{zavqiy.death} · {zLoc.lifespan}
+                    </div>
+                    <p style={{ fontSize: 15.5, lineHeight: 1.72, color: 'var(--fg)', margin: '0 0 24px' }}>
+                      {zBio}{zBio.length >= 220 ? '…' : ''}
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => navigate('/museum/zavqiy')}
+                        style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)', padding: '10px 22px', borderRadius: 99, fontSize: 14, fontWeight: 600 }}
+                      >{moreLabel} →</button>
+                      <button
+                        onClick={() => navigate('/museum/zavqiy?visit=true')}
+                        style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', padding: '10px 22px', borderRadius: 99, fontSize: 14, fontWeight: 600 }}
+                      >{tourLabel}</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* News section — Nafis style */}
           {news.length > 0 && (
             <div style={{ marginTop: 60 }}>

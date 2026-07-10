@@ -588,30 +588,38 @@ export default function AdminPage() {
                       return (
                         <div key={l} style={{ marginBottom: 28, background: 'var(--surface2)', borderRadius: 10, padding: 20, border: '1px solid var(--line)' }}>
                           <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.12em', color: 'var(--accent)', marginBottom: 16 }}>{labels[l]}</div>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
                             <div>
-                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Название</label>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Название музея</label>
                               <input name={isNew ? 'name' : `name_${l}`} type="text" defaultValue={ld.name || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Имя поэта / владельца</label>
+                              <input name={isNew ? 'owner' : `owner_${l}`} type="text" defaultValue={ld.owner || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Должность / роль</label>
+                              <input name={isNew ? 'role' : `role_${l}`} type="text" defaultValue={ld.role || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Годы жизни (lifespan)</label>
+                              <input name={isNew ? 'lifespan' : `lifespan_${l}`} type="text" defaultValue={ld.lifespan || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                             </div>
                             <div>
                               <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Адрес</label>
                               <input name={isNew ? 'address' : `address_${l}`} type="text" defaultValue={li.address || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                             </div>
                             <div>
-                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Режим работы</label>
-                              <input name={isNew ? 'hours' : `hours_${l}`} type="text" defaultValue={li.hours || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
-                            </div>
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Вход</label>
-                              <input name={isNew ? 'entry' : `entry_${l}`} type="text" defaultValue={li.entry || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
-                            </div>
-                            <div>
                               <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Дата основания</label>
                               <input name={isNew ? 'founded' : `founded_${l}`} type="text" defaultValue={li.founded || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                             </div>
-                            <div>
-                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Должность / роль</label>
-                              <input name={isNew ? 'role' : `role_${l}`} type="text" defaultValue={ld.role || ''} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--line)', background: 'var(--surface)', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            <div style={{ background: 'color-mix(in srgb, var(--accent) 6%, var(--surface))', borderRadius: 8, padding: '12px 14px', border: '1px solid color-mix(in srgb, var(--accent) 25%, var(--line))' }}>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--accent)', marginBottom: 5, fontWeight: 700 }}>График работы</label>
+                              <input name={isNew ? 'hours' : `hours_${l}`} type="text" defaultValue={li.hours || ''} placeholder="Пн–Сб, 9:00–18:00" style={{ width: '100%', padding: '8px 0', border: 'none', background: 'transparent', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
+                            </div>
+                            <div style={{ background: 'color-mix(in srgb, var(--accent) 6%, var(--surface))', borderRadius: 8, padding: '12px 14px', border: '1px solid color-mix(in srgb, var(--accent) 25%, var(--line))' }}>
+                              <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--accent)', marginBottom: 5, fontWeight: 700 }}>Цена входа</label>
+                              <input name={isNew ? 'entry' : `entry_${l}`} type="text" defaultValue={li.entry || ''} placeholder="Взрослые: 15 000 сум · Дети: 5 000 сум" style={{ width: '100%', padding: '8px 0', border: 'none', background: 'transparent', color: 'var(--fg)', fontSize: 14, outline: 'none' }} />
                             </div>
                             <div style={{ gridColumn: '1 / -1' }}>
                               <label style={{ display: 'block', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.08em', color: 'var(--muted)', marginBottom: 5 }}>Биография</label>
