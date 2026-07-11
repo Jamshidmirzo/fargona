@@ -15,7 +15,7 @@ export function MuseumsProvider({ children }) {
     fetch(`${API_URL}/api/museums?lang=${lang}`)
       .then(res => res.json())
       .then(data => {
-        setMuseums(data);
+        setMuseums(data.filter(m => m.id !== 'zavqiy'));
         setLoading(false);
       })
       .catch(err => {
