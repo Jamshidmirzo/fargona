@@ -5,10 +5,11 @@ exports.getAllMuseums = (req, res) => {
     const { lang = 'uz' } = req.query;
     const stmt = db.prepare(`
       SELECT m.id, m.city, m.pos_x, m.pos_y, m.birth, m.death, m.established, m.hero_image, m.lat, m.lon,
-             t.name, t.owner, t.role, t.lifespan, t.tagline, t.bio,
+             t.name, t.owner, t.role, t.lifespan, t.tagline, t.bio, t.museum_bio,
              t.address, t.founded, t.hours, t.entry, t.phone
       FROM museums m
       LEFT JOIN museum_translations t ON m.id = t.museum_id AND t.lang = ?
+      ORDER BY m.sort_order
     `);
     const museums = stmt.all(lang);
     
@@ -65,6 +66,7 @@ exports.getAllMuseums = (req, res) => {
         lifespan: m.lifespan,
         tagline: m.tagline,
         bio: m.bio,
+        museum_bio: m.museum_bio,
         info: {
           address: m.address,
           founded: m.founded,
@@ -77,7 +79,7 @@ exports.getAllMuseums = (req, res) => {
         exhibits: exhibitsByMuseum[m.id] || []
       }
     }));
-    
+
     res.json(result);
   } catch (error) {
     console.error(error);
@@ -92,7 +94,7 @@ exports.getMuseumById = (req, res) => {
     
     const stmt = db.prepare(`
       SELECT m.id, m.city, m.pos_x, m.pos_y, m.birth, m.death, m.established, m.hero_image, m.lat, m.lon,
-             t.name, t.owner, t.role, t.lifespan, t.tagline, t.bio,
+             t.name, t.owner, t.role, t.lifespan, t.tagline, t.bio, t.museum_bio,
              t.address, t.founded, t.hours, t.entry, t.phone
       FROM museums m
       LEFT JOIN museum_translations t ON m.id = t.museum_id AND t.lang = ?
@@ -127,6 +129,7 @@ exports.getMuseumById = (req, res) => {
         lifespan: m.lifespan,
         tagline: m.tagline,
         bio: m.bio,
+        museum_bio: m.museum_bio,
         info: {
           address: m.address,
           founded: m.founded,
@@ -139,7 +142,7 @@ exports.getMuseumById = (req, res) => {
         exhibits: exhibits
       }
     };
-    
+
     res.json(result);
   } catch (error) {
     console.error(error);
@@ -185,8 +188,8 @@ exports.updateMuseum = (req, res) => {
     const langs = multiLang ? ['uz', 'ru', 'en'] : [req.query.lang || 'uz'];
 
     const checkStmt = db.prepare('SELECT 1 FROM museum_translations WHERE museum_id=? AND lang=?');
-    const updateStmt = db.prepare(`UPDATE museum_translations SET name=?,owner=?,role=?,lifespan=?,tagline=?,bio=?,address=?,founded=?,hours=?,entry=?,phone=? WHERE museum_id=? AND lang=?`);
-    const insertStmt = db.prepare(`INSERT INTO museum_translations (museum_id,lang,name,owner,role,lifespan,tagline,bio,address,founded,hours,entry,phone) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    const updateStmt = db.prepare(`UPDATE museum_translations SET name=?,owner=?,role=?,lifespan=?,tagline=?,bio=?,museum_bio=?,address=?,founded=?,hours=?,entry=?,phone=? WHERE museum_id=? AND lang=?`);
+    const insertStmt = db.prepare(`INSERT INTO museum_translations (museum_id,lang,name,owner,role,lifespan,tagline,bio,museum_bio,address,founded,hours,entry,phone) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
 
     db.transaction(() => {
       for (const l of langs) {
@@ -194,6 +197,7 @@ exports.updateMuseum = (req, res) => {
         const vals = [
           body[`name${sfx}`] || '', body[`owner${sfx}`] || '', body[`role${sfx}`] || '',
           body[`lifespan${sfx}`] || '', body[`tagline${sfx}`] || '', body[`bio${sfx}`] || '',
+          body[`museum_bio${sfx}`] || '',
           body[`address${sfx}`] || '', body[`founded${sfx}`] || '', body[`hours${sfx}`] || '',
           body[`entry${sfx}`] || '',
           // phone is shared (not language-specific), fall back to body.phone
@@ -324,11 +328,35 @@ exports.createExhibit = (req, res) => {
     const { id } = req.params; // museum_id
     const { lang = 'uz' } = req.query;
     const { title, description, image } = req.body;
-    
-    const stmt = db.prepare('INSERT INTO exhibits (museum_id, lang, hall_num, title, desc, image_url) VALUES (?, ?, 1, ?, ?, ?)');
-    const result = stmt.run(id, lang, title || '', description || '', image || '');
-    
-    res.json({ success: true, id: result.lastInsertRowid });
+
+    // Fan out to all supported languages so the exhibit (and its photo) is
+    // visible regardless of the viewer's UI language. Only the language the
+    // admin actually filled in gets the title/description; other languages
+    // start empty and can be translated later via the edit form.
+    const insertStmt = db.prepare(
+      'INSERT INTO exhibits (museum_id, lang, hall_num, title, desc, image_url) VALUES (?, ?, 1, ?, ?, ?)'
+    );
+
+    const langs = ['uz', 'ru', 'en'];
+    const insertedIds = {};
+
+    db.transaction(() => {
+      for (const l of langs) {
+        const isCurrent = l === lang;
+        const result = insertStmt.run(
+          id,
+          l,
+          title || '',
+          isCurrent ? (description || '') : '',
+          image || ''
+        );
+        insertedIds[l] = result.lastInsertRowid;
+      }
+    })();
+
+    // Return the id for the language the admin is currently editing so the
+    // frontend can immediately reference the new row for update/delete.
+    res.json({ success: true, id: insertedIds[lang] || insertedIds.uz, ids: insertedIds });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to create exhibit' });

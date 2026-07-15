@@ -5,37 +5,22 @@ import { API_URL } from '../config';
 export default function ExpositionPlayer({ museum, onExit }) {
   const { lang, t } = useLang();
   
-  // Flatten all exhibits across all halls into a single continuous array
+  // Flatten all exhibits across all halls into a single continuous array.
+  // Only exhibits that have their own uploaded image are shown — never fall
+  // back to shared stock photos, because those belong to other museums.
   const allExhibits = [];
-  const dbExhibits = (museum[lang] || museum.uz || {}).exhibits || [];
+  const dbExhibits = ((museum[lang] || museum.uz || {}).exhibits || [])
+    .filter(ex => ex && ex.image);
 
-  if (dbExhibits.length > 0) {
-    dbExhibits.forEach((ex, idx) => {
-      allExhibits.push({
-        hallTitle: ex.title || 'Exhibition Object',
-        hallSubtitle: ex.description || '',
-        exhibitTitle: ex.title || '',
-        hallIndex: ex.hall_num || (idx + 1),
-        imgSrc: ex.image ? `${API_URL}${ex.image}` : `${API_URL}/uploads/image${(idx % 12) + 1}.jpeg`,
-        fallbackSrc: `${API_URL}/uploads/image${(idx % 12) + 1}.png`
-      });
+  dbExhibits.forEach((ex, idx) => {
+    allExhibits.push({
+      hallTitle: ex.title || 'Exhibition Object',
+      hallSubtitle: ex.description || '',
+      exhibitTitle: ex.title || '',
+      hallIndex: ex.hall_num || (idx + 1),
+      imgSrc: `${API_URL}${ex.image}`,
     });
-  } else {
-    let imgCounter = 1;
-    (t.halls || []).forEach((hall, hIdx) => {
-      hall.exhibits.forEach((ex, eIdx) => {
-        allExhibits.push({
-          hallTitle: hall.title,
-          hallSubtitle: hall.subtitle,
-          exhibitTitle: ex,
-          hallIndex: hIdx + 1,
-          imgSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.jpeg`,
-          fallbackSrc: `${API_URL}/uploads/image${(imgCounter % 12) + 1}.png`
-        });
-        imgCounter++;
-      });
-    });
-  }
+  });
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
@@ -127,9 +112,8 @@ export default function ExpositionPlayer({ museum, onExit }) {
             pointerEvents: 'none'
           }}
         >
-          <img 
-            src={ex.imgSrc} 
-            onError={(e) => { e.target.src = ex.fallbackSrc; }}
+          <img
+            src={ex.imgSrc}
             alt={ex.exhibitTitle}
             className={currentIndex === idx ? 'kenburns-active' : ''}
             style={{ 
