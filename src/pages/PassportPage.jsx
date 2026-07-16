@@ -3,12 +3,14 @@ import { useSaved } from '../contexts/SavedContext';
 import { CITIES  } from '../data/museums';
 import { useMuseums } from '../contexts/MuseumsContext';
 import { useNavigate } from 'react-router-dom';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 export default function PassportPage() {
   const { museums, loading } = useMuseums();
   const { lang, t } = useLang();
   const navigate = useNavigate();
   const { visited, quizBest } = useSaved();
+  const isMobile = useIsMobile();
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
 
   const total = museums.length;
@@ -16,12 +18,12 @@ export default function PassportPage() {
   const pct = total ? Math.round((visitedCount / total) * 100) : 0;
 
   return (
-    <section style={{ maxWidth: 1180, margin: '0 auto', padding: '26px 24px 90px', animation: 'fhFade .4s ease both' }}>
+    <section style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '18px 16px 60px' : '26px 24px 90px', animation: 'fhFade .4s ease both' }}>
       <div style={{ fontSize: 12, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>{t.nav.passport}</div>
       <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 'clamp(30px, 4.4vw, 48px)', color: 'var(--fg)', margin: '0 0 8px' }}>{t.passportTitle}</h1>
       <p style={{ fontSize: 16, color: 'var(--muted)', margin: '0 0 34px', maxWidth: 560 }}>{t.passportText}</p>
 
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: '32px 36px', display: 'flex', alignItems: 'center', gap: 32, marginBottom: 46 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: isMobile ? '20px 20px' : '32px 36px', display: 'flex', alignItems: 'center', gap: isMobile ? 20 : 32, marginBottom: isMobile ? 32 : 46, flexWrap: 'wrap' }}>
         <div style={{ width: 90, height: 90, borderRadius: '50%', background: 'var(--surface2)', border: '4px solid var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', color: 'var(--accent)' }}>
           <div style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 32, lineHeight: 1 }}>{pct}%</div>
         </div>

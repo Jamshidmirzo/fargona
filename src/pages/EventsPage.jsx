@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 const MON_SHORT = {
   ru: ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
@@ -20,6 +21,7 @@ export default function EventsPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setLoading(true);
@@ -30,7 +32,7 @@ export default function EventsPage() {
   }, [lang]);
 
   return (
-    <section style={{ maxWidth: 1080, margin: '0 auto', padding: '26px 40px 100px', animation: 'fhFade .4s ease both' }}>
+    <section style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '18px 16px 60px' : '26px 40px 100px', animation: 'fhFade .4s ease both' }}>
       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
         {t.nav?.events || 'Афиша'}
       </div>
@@ -60,7 +62,7 @@ export default function EventsPage() {
             const tagBg = e.museum_name ? 'var(--accent)' : 'var(--surface2)';
             const tagColor = e.museum_name ? 'var(--accent-fg)' : 'var(--accent)';
             return (
-              <div key={e.id} onClick={() => navigate(`/events/${e.id}`)} style={{ display: 'grid', gridTemplateColumns: '104px 1fr', gap: 28, alignItems: 'stretch', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '24px 26px', cursor: 'pointer', transition: 'border-color .2s' }} onMouseEnter={ev => ev.currentTarget.style.borderColor='var(--accent)'} onMouseLeave={ev => ev.currentTarget.style.borderColor='var(--line)'}>
+              <div key={e.id} onClick={() => navigate(`/events/${e.id}`)} style={{ display: 'grid', gridTemplateColumns: isMobile ? '68px 1fr' : '104px 1fr', gap: isMobile ? 16 : 28, alignItems: 'stretch', background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: isMobile ? '16px 18px' : '24px 26px', cursor: 'pointer', transition: 'border-color .2s' }} onMouseEnter={ev => ev.currentTarget.style.borderColor='var(--accent)'} onMouseLeave={ev => ev.currentTarget.style.borderColor='var(--line)'}>
                 <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', borderRight: '1px solid var(--line)', paddingRight: 20 }}>
                   <div style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 44, color: 'var(--accent)', lineHeight: .95 }}>{day}</div>
                   <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, letterSpacing: '.14em', textTransform: 'uppercase', color: 'var(--muted)', marginTop: 5 }}>{monthShort}</div>

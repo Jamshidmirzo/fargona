@@ -3,11 +3,13 @@ import { useLang } from '../contexts/LangContext';
 import { useSaved } from '../contexts/SavedContext';
 import { epithets, CITIES } from '../data/museums';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 export default function MuseumCard({ museum, index, useCardView = false }) {
   const navigate = useNavigate();
   const { lang, t } = useLang();
   const { isSaved, toggleSave } = useSaved();
+  const isMobile = useIsMobile();
   const loc = museum[lang] || museum.uz || museum.ru || museum.en || museum;
   if (!loc) return null;
   const saved = isSaved(museum.id);
@@ -89,33 +91,65 @@ export default function MuseumCard({ museum, index, useCardView = false }) {
       className="nfrow"
       onClick={() => navigate(`/museum/${museum.id}`)}
       style={{
-        cursor: 'pointer', display: 'grid', gridTemplateColumns: '64px 1fr auto', gap: 34, alignItems: 'center', padding: '38px 6px', borderTop: '1px solid var(--line)', animation: 'slideUp .6s ease both', animationDelay: `${index * 0.1}s`
+        cursor: 'pointer',
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '44px 1fr' : '64px 1fr auto',
+        gap: isMobile ? 16 : 34,
+        alignItems: 'center',
+        padding: isMobile ? '24px 4px' : '38px 6px',
+        borderTop: '1px solid var(--line)',
+        animation: 'slideUp .6s ease both',
+        animationDelay: `${index * 0.1}s`
       }}
     >
-      <div style={{ fontFamily: 'var(--font-head)', fontStyle: 'italic', fontWeight: 400, fontSize: 30, color: 'var(--accent)' }}>
+      <div style={{
+        fontFamily: 'var(--font-head)', fontStyle: 'italic', fontWeight: 400,
+        fontSize: isMobile ? 22 : 30, color: 'var(--accent)'
+      }}>
         {String(index + 1).padStart(2, '0')}
       </div>
       <div>
-        <h3 className="nfname" style={{ fontFamily: 'var(--font-head)', fontWeight: 500, fontSize: 'clamp(26px, 3.6vw, 46px)', lineHeight: 1.05, color: 'var(--fg)', margin: 0, letterSpacing: '-.01em', transition: 'color .35s' }}>
+        <h3 className="nfname" style={{
+          fontFamily: 'var(--font-head)', fontWeight: 500,
+          fontSize: isMobile ? 'clamp(20px, 6vw, 28px)' : 'clamp(26px, 3.6vw, 46px)',
+          lineHeight: 1.1, color: 'var(--fg)', margin: 0,
+          letterSpacing: '-.01em', transition: 'color .35s'
+        }}>
           {loc.name}
         </h3>
-        <div style={{ fontFamily: 'var(--font-body)', fontSize: 15, color: 'var(--muted)', marginTop: 9, fontStyle: 'italic', fontWeight: 300 }}>
-          {loc.owner} — {epithet}
+        <div style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: isMobile ? 13 : 15,
+          color: 'var(--muted)', marginTop: 6,
+          fontStyle: 'italic', fontWeight: 300
+        }}>
+          {loc.owner}{epithet ? ` — ${epithet}` : ''}
         </div>
+        {isMobile && (
+          <div style={{
+            fontFamily: 'var(--font-ui)', fontSize: 10, letterSpacing: '.18em',
+            textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600,
+            marginTop: 8
+          }}>
+            {cityName}{loc.lifespan ? ` · ${loc.lifespan}` : ''}
+          </div>
+        )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>
-            {cityName}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 26 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontFamily: 'var(--font-ui)', fontSize: 10.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>
+              {cityName}
+            </div>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--muted)', marginTop: 4 }}>
+              {loc.lifespan}
+            </div>
           </div>
-          <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--muted)', marginTop: 4 }}>
-            {loc.lifespan}
-          </div>
+          <span className="nfarrow" style={{ fontFamily: 'var(--font-head)', fontSize: 28, color: 'var(--accent)', opacity: 0, transform: 'translateX(-10px)', transition: 'opacity .35s, transform .35s' }}>
+            →
+          </span>
         </div>
-        <span className="nfarrow" style={{ fontFamily: 'var(--font-head)', fontSize: 28, color: 'var(--accent)', opacity: 0, transform: 'translateX(-10px)', transition: 'opacity .35s, transform .35s' }}>
-          →
-        </span>
-      </div>
+      )}
     </div>
   );
 }

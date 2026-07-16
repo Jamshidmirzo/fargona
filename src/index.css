@@ -770,9 +770,24 @@ label {
 }
 
 /* ----------------------------------------------------------
+   26.5 RESPONSIVE HELPERS
+   ---------------------------------------------------------- */
+.mobile-only { display: none; }
+.desktop-only { display: initial; }
+
+@media (max-width: 768px) {
+  .mobile-only { display: initial; }
+  .desktop-only { display: none !important; }
+}
+
+/* ----------------------------------------------------------
    27. RESPONSIVE — TABLET (≤ 768px)
    ---------------------------------------------------------- */
 @media (max-width: 768px) {
+  html, body {
+    overflow-x: hidden;
+  }
+
   .page-title {
     font-size: 2rem;
   }
@@ -802,6 +817,38 @@ label {
     width: 90px;
     height: 90px;
     font-size: 0.8rem;
+  }
+
+  /* Mobile drawer menu */
+  .mobile-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    backdrop-filter: blur(16px);
+    display: flex;
+    flex-direction: column;
+    padding: 88px 24px 32px;
+    gap: 4px;
+    animation: fadeIn .18s ease both;
+    overflow-y: auto;
+  }
+
+  .mobile-drawer-link {
+    display: block;
+    padding: 14px 16px;
+    font-family: var(--font-ui);
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--fg);
+    text-decoration: none;
+    border-radius: 12px;
+    transition: background .15s;
+  }
+
+  .mobile-drawer-link.active {
+    background: var(--surface2);
+    color: var(--accent);
   }
 }
 
@@ -859,6 +906,8 @@ label {
     font-size: 12pt;
   }
 
+  header,
+  footer,
   .admin-sidebar,
   .btn-primary,
   .btn-secondary,

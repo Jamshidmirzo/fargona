@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext';
 import LinkText from '../components/LinkText';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 const MONTHS = {
   ru: ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],
@@ -25,6 +26,7 @@ export default function NewsDetailPage() {
   const navigate = useNavigate();
   const [news, setNews] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setLoading(true);
@@ -43,7 +45,7 @@ export default function NewsDetailPage() {
   );
 
   return (
-    <article style={{ maxWidth: 780, margin: '0 auto', padding: '32px 40px 100px', animation: 'fhFade .4s ease both' }}>
+    <article style={{ maxWidth: 780, margin: '0 auto', padding: isMobile ? '20px 16px 60px' : '32px 40px 100px', animation: 'fhFade .4s ease both' }}>
       <button
         onClick={() => navigate('/news')}
         style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', fontSize: 13, fontFamily: 'var(--font-ui)', letterSpacing: '.06em', textTransform: 'uppercase', padding: 0, marginBottom: 32, display: 'flex', alignItems: 'center', gap: 6 }}

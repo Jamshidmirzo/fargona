@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import { useLang } from '../contexts/LangContext';
 import { useSaved } from '../contexts/SavedContext';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 export default function QuizPlayer({ museum, onBack }) {
   const { lang, t } = useLang();
   const { saveQuizScore, markVisited } = useSaved();
+  const isMobile = useIsMobile();
   const loc = museum[lang] || museum.uz || museum.ru || museum.en || museum;
   const quiz = loc.quiz || [];
   const [qi, setQi] = useState(0);
@@ -71,12 +73,12 @@ export default function QuizPlayer({ museum, onBack }) {
 
   if (done) {
     return (
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '22px 24px 90px', animation: 'fhFade .4s ease both' }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', padding: isMobile ? '14px 16px 60px' : '22px 24px 90px', animation: 'fhFade .4s ease both' }}>
         <button onClick={onBack} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: 14, padding: '6px 0', marginBottom: 18 }}>{t.backToMuseum}</button>
         <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 11.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)' }}>{t.quizTitle} · {loc.name}</div>
-        <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '48px 32px', marginTop: 14, textAlign: 'center' }}>
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: isMobile ? '32px 20px' : '48px 32px', marginTop: 14, textAlign: 'center' }}>
           <div style={{ fontSize: 12, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--muted)', marginBottom: 18 }}>{t.yourResult}</div>
-          <div style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 68, lineHeight: 1, color: 'var(--accent)' }}>{score}<span style={{ color: 'var(--muted)', fontSize: 36 }}>/{quiz.length}</span></div>
+          <div style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: isMobile ? 54 : 68, lineHeight: 1, color: 'var(--accent)' }}>{score}<span style={{ color: 'var(--muted)', fontSize: isMobile ? 28 : 36 }}>/{quiz.length}</span></div>
           <div style={{ fontSize: 13, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.12em', marginTop: 8 }}>{t.correct}</div>
           <p style={{ fontSize: 19, color: 'var(--fg)', margin: '24px auto 32px', maxWidth: 420, lineHeight: 1.5 }}>{resultMsg}</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -92,14 +94,14 @@ export default function QuizPlayer({ museum, onBack }) {
     <div style={{ maxWidth: 700, margin: '0 auto', padding: '22px 24px 90px', animation: 'fhFade .4s ease both' }}>
       <button onClick={onBack} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: 14, padding: '6px 0', marginBottom: 18 }}>{t.backToMuseum}</button>
       <div style={{ textAlign: 'center', marginBottom: 8, fontSize: 11.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)' }}>{t.quizTitle} · {loc.name}</div>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: '36px 34px 30px', marginTop: 14 }}>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: isMobile ? '24px 20px' : '36px 34px 30px', marginTop: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <div style={{ fontSize: 13, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{t.question} {qi + 1} {t.of} {quiz.length}</div>
           <div style={{ flex: 1, height: 5, background: 'var(--surface2)', borderRadius: 99, overflow: 'hidden' }}>
             <div style={{ height: '100%', background: 'var(--accent)', width: `${Math.round(((qi + 1) / quiz.length) * 100)}%`, transition: 'width .3s' }} />
           </div>
         </div>
-        <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 26, lineHeight: 1.3, color: 'var(--fg)', margin: '0 0 26px' }}>{currentQ.q}</h2>
+        <h2 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: isMobile ? 20 : 26, lineHeight: 1.3, color: 'var(--fg)', margin: '0 0 20px' }}>{currentQ.q}</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
           {currentQ.options.map((txt, i) => (
             <button key={i} onClick={() => handleAnswer(i)} style={optStyle(i === selected)}>{txt}</button>

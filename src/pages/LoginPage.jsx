@@ -21,8 +21,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
-      <div style={{ background: 'var(--surface)', padding: 48, borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', width: '100%', maxWidth: 440, boxShadow: '0 12px 40px rgba(0,0,0,0.08)', animation: 'fhRise .4s ease both' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: 16 }}>
+      <div style={{ background: 'var(--surface)', padding: 'clamp(24px, 6vw, 48px)', borderRadius: 'calc(var(--radius) * 1.5)', border: '1px solid var(--line)', width: '100%', maxWidth: 440, boxShadow: '0 12px 40px rgba(0,0,0,0.08)', animation: 'fhRise .4s ease both' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--accent)', margin: '0 auto 16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 22, fontWeight: 800 }}>A</div>
           <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 28, margin: '0 0 8px', color: 'var(--fg)' }}>Admin Access</h1>

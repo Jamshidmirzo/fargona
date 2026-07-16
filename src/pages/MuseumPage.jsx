@@ -8,6 +8,7 @@ import QuizPlayer from '../components/QuizPlayer';
 import ExpositionPlayer from '../components/ExpositionPlayer';
 import { useState, useEffect, useMemo } from 'react';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 const MON_SHORT = {
   ru: ['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'],
@@ -41,12 +42,24 @@ export default function MuseumPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { lang, t } = useLang();
+  const isMobile = useIsMobile();
   const [activeImgIdx, setActiveImgIdx] = useState(0);
   const { isSaved, toggleSave, markVisited } = useSaved();
   const [news, setNews] = useState([]);
   const [events, setEvents] = useState([]);
+  const [zavqiyData, setZavqiyData] = useState(null);
+  const [showZavqiyTour, setShowZavqiyTour] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
 
   const museum = museums.find(m => m.id === id) || null;
+
+  useEffect(() => {
+    if (id !== 'muqimiy') { setZavqiyData(null); return; }
+    fetch(`${API_URL}/api/museums/zavqiy?lang=${lang}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => setZavqiyData(d))
+      .catch(() => {});
+  }, [id, lang]);
 
   const heroImages = useMemo(() => {
     if (!museum?.heroImage) return [];
@@ -86,6 +99,17 @@ export default function MuseumPage() {
     }, 4000);
     return () => clearInterval(interval);
   }, [heroImages.length]);
+
+  useEffect(() => {
+    if (lightboxIdx === null) return;
+    const onKey = (e) => {
+      if (e.key === 'Escape') setLightboxIdx(null);
+      if (e.key === 'ArrowRight') setLightboxIdx(i => (i + 1) % heroImages.length);
+      if (e.key === 'ArrowLeft') setLightboxIdx(i => (i - 1 + heroImages.length) % heroImages.length);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lightboxIdx, heroImages.length]);
   // ── END HOOKS ──
 
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
@@ -95,6 +119,8 @@ export default function MuseumPage() {
   const showVisit = searchParams.get('visit') === 'true';
 
   if (showQuiz) return <QuizPlayer museum={museum} onBack={() => setSearchParams({})} />;
+  if (showVisit && searchParams.get('museum') === 'zavqiy' && zavqiyData)
+    return <ExpositionPlayer museum={zavqiyData} onExit={() => setSearchParams({})} />;
   if (showVisit) return <ExpositionPlayer museum={museum} onExit={() => setSearchParams({})} />;
 
   const _raw = museum[lang] || museum.uz || museum.ru || museum.en;
@@ -129,12 +155,36 @@ export default function MuseumPage() {
     : { background: 'color-mix(in srgb, var(--surface) 84%, transparent)', color: 'var(--fg)', border: '1px solid var(--line)', backdropFilter: 'blur(4px)' };
 
   return (
-    <section style={{ maxWidth: 1180, margin: '0 auto', padding: '22px 24px 90px', animation: 'fhFade .4s ease both' }}>
+    <section style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '14px 16px 60px' : '22px 24px 90px', animation: 'fhFade .4s ease both' }}>
       <button onClick={() => navigate('/')} style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: 14, padding: '6px 0', marginBottom: 18 }}>{t.backToList}</button>
 
-      <div style={{ position: 'relative', height: 'min(52vh, 440px)', width: '100%', overflow: 'hidden', border: '1px solid var(--line)', borderRadius: 'var(--radius)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      {lightboxIdx !== null && (
+        <div
+          onClick={() => setLightboxIdx(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.93)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        >
+          <img
+            src={`${API_URL}${heroImages[lightboxIdx]}`}
+            alt=""
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '92vw', maxHeight: '92vh', objectFit: 'contain', borderRadius: 4, userSelect: 'none' }}
+          />
+          <button onClick={() => setLightboxIdx(null)} style={{ position: 'fixed', top: 22, right: 28, background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', fontSize: 26, width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>✕</button>
+          {heroImages.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); setLightboxIdx(i => (i - 1 + heroImages.length) % heroImages.length); }} style={{ position: 'fixed', left: 18, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', fontSize: 32, width: 50, height: 50, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>‹</button>
+              <button onClick={e => { e.stopPropagation(); setLightboxIdx(i => (i + 1) % heroImages.length); }} style={{ position: 'fixed', right: 18, top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.12)', border: 'none', color: '#fff', fontSize: 32, width: 50, height: 50, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>›</button>
+              <div style={{ position: 'fixed', bottom: 22, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8 }}>
+                {heroImages.map((_, i) => <div key={i} onClick={e => { e.stopPropagation(); setLightboxIdx(i); }} style={{ width: 8, height: 8, borderRadius: '50%', background: lightboxIdx === i ? '#fff' : 'rgba(255,255,255,0.35)', cursor: 'pointer', transition: 'background .2s' }} />)}
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      <div style={{ position: 'relative', height: isMobile ? 'min(40vh, 300px)' : 'min(52vh, 440px)', width: '100%', overflow: 'hidden', border: '1px solid var(--line)', borderRadius: 'var(--radius)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: heroImages.length > 0 ? 'zoom-in' : 'default' }}>
         {heroImages.length > 0 ? (
-          <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+          <div onClick={() => setLightboxIdx(activeImgIdx)} style={{ width: '100%', height: '100%', position: 'relative' }}>
             {heroImages.map((img, idx) => (
               <img
                 key={idx}
@@ -153,25 +203,24 @@ export default function MuseumPage() {
             ))}
             {heroImages.length > 1 && (
               <>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setActiveImgIdx(prev => (prev - 1 + heroImages.length) % heroImages.length); }} 
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActiveImgIdx(prev => (prev - 1 + heroImages.length) % heroImages.length); }}
                   style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: 20 }}
                 >
                   ‹
                 </button>
-                <button 
-                  onClick={(e) => { e.stopPropagation(); setActiveImgIdx(prev => (prev + 1) % heroImages.length); }} 
+                <button
+                  onClick={(e) => { e.stopPropagation(); setActiveImgIdx(prev => (prev + 1) % heroImages.length); }}
                   style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', background: 'rgba(0,0,0,0.5)', color: '#fff', border: 'none', borderRadius: '50%', width: 40, height: 40, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: 20 }}
                 >
                   ›
                 </button>
-                {/* Dots indicator */}
                 <div style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 8, zIndex: 10 }}>
                   {heroImages.map((_, idx) => (
-                    <div 
-                      key={idx} 
+                    <div
+                      key={idx}
                       onClick={(e) => { e.stopPropagation(); setActiveImgIdx(idx); }}
-                      style={{ width: 8, height: 8, borderRadius: '50%', background: activeImgIdx === idx ? 'var(--accent)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'background .3s' }} 
+                      style={{ width: 8, height: 8, borderRadius: '50%', background: activeImgIdx === idx ? 'var(--accent)' : 'rgba(255,255,255,0.5)', cursor: 'pointer', transition: 'background .3s' }}
                     />
                   ))}
                 </div>
@@ -183,7 +232,7 @@ export default function MuseumPage() {
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: 28 }}>
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', alignItems: isMobile ? 'flex-start' : 'flex-end', justifyContent: 'space-between', marginTop: isMobile ? 20 : 28 }}>
         <div style={{ maxWidth: 660 }}>
           <div style={{ fontSize: 11.5, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 12 }}>{cityName} · {loc.role}</div>
           <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.03, color: 'var(--fg)', margin: '0 0 12px', letterSpacing: '-.01em' }}>{loc.name}</h1>
@@ -199,13 +248,25 @@ export default function MuseumPage() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 38, marginTop: 46, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.55fr 1fr', gap: isMobile ? 32 : 38, marginTop: isMobile ? 32 : 46, alignItems: 'start' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
             <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
             <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>{t.biography}</h2>
           </div>
           <p style={{ fontSize: 18, lineHeight: 1.75, color: 'var(--fg)', margin: '0 0 44px' }}><LinkText text={loc.bio} /></p>
+
+          {loc.museum_bio && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 16px' }}>
+                <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
+                <h2 style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 13, letterSpacing: '.16em', textTransform: 'uppercase', color: 'var(--accent)', margin: 0 }}>
+                  {t.aboutMuseum || { uz: 'Muzey haqida', ru: 'О музее', en: 'About the museum' }[lang] || 'О музее'}
+                </h2>
+              </div>
+              <p style={{ fontSize: 18, lineHeight: 1.75, color: 'var(--fg)', margin: '0 0 44px' }}><LinkText text={loc.museum_bio} /></p>
+            </>
+          )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 22px' }}>
             <span style={{ width: 26, height: 1, background: 'var(--accent)' }} />
@@ -224,47 +285,44 @@ export default function MuseumPage() {
           </div>
 
           {/* Zavqiy companion section — shown only on Muqimiy page */}
-          {museum.id === 'muqimiy' && (() => {
-            const zavqiy = museums.find(m => m.id === 'zavqiy');
-            if (!zavqiy) return null;
-            const zLoc = zavqiy[lang] || zavqiy.uz || {};
-            const zBio = (zLoc.bio || '').substring(0, 220).trimEnd();
-            const sectionLabel = { uz: 'Shu hujrada', ru: 'Также в этой хужре', en: 'Also in this complex' }[lang] || 'Также в этой хужре';
-            const moreLabel   = { uz: 'Batafsil', ru: 'Подробнее', en: 'Learn more' }[lang] || 'Подробнее';
-            const tourLabel   = { uz: 'Virtual tur', ru: 'Виртуальный тур', en: 'Virtual tour' }[lang] || 'Виртуальный тур';
+          {museum.id === 'muqimiy' && zavqiyData && (() => {
+            const zLoc = zavqiyData[lang] || zavqiyData.uz || {};
+            const zBio = (zLoc.bio || '').substring(0, 260).trimEnd();
+            const sectionLabel = { uz: 'Shu hujrada — Zavqiy', ru: 'Также в этой хужре — Завкий', en: 'Also in this complex — Zavqiy' }[lang] || 'Также в этой хужре';
+            const tourLabel = { uz: 'Virtual tur', ru: 'Виртуальный тур', en: 'Virtual tour' }[lang] || 'Виртуальный тур';
+            const heroImg = zavqiyData.heroImage;
             return (
-              <div style={{ marginTop: 60, border: '1px solid var(--line)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                <div style={{ padding: '18px 28px', borderBottom: '1px solid var(--line)', background: 'var(--surface2)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <span style={{ width: 26, height: 1, background: 'var(--accent)', display: 'block' }} />
-                  <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 12, letterSpacing: '.18em', textTransform: 'uppercase', color: 'var(--accent)' }}>{sectionLabel}</span>
+              <div style={{ marginTop: 60, borderRadius: 'var(--radius)', overflow: 'hidden', border: '1px solid var(--line)', background: 'var(--surface)' }}>
+                {/* Header strip */}
+                <div style={{ padding: '14px 28px', background: 'var(--accent)', display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <span style={{ fontFamily: 'var(--font-ui)', fontWeight: 700, fontSize: 11, letterSpacing: '.22em', textTransform: 'uppercase', color: 'var(--accent-fg)', opacity: .85 }}>{sectionLabel}</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr' }}>
-                  {zavqiy.heroImage && (
-                    <div style={{ overflow: 'hidden', minHeight: 220 }}>
+                {/* Body */}
+                <div style={{ display: 'grid', gridTemplateColumns: heroImg && !isMobile ? '260px 1fr' : '1fr', minHeight: 240 }}>
+                  {heroImg && (
+                    <div style={{ overflow: 'hidden', position: 'relative' }}>
                       <img
-                        src={`${API_URL}${zavqiy.heroImage}`}
+                        src={`${API_URL}${heroImg}`}
                         alt={zLoc.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                       />
+                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to right, transparent 60%, var(--surface))' }} />
                     </div>
                   )}
-                  <div style={{ padding: '28px 30px', display: 'flex', flexDirection: 'column', gap: 0 }}>
-                    <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 8 }}>{zLoc.role}</div>
-                    <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 30, lineHeight: 1.05, margin: '0 0 5px', color: 'var(--fg)' }}>{zLoc.name}</h3>
-                    <div style={{ fontSize: 14, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 16 }}>
-                      {zavqiy.birth}–{zavqiy.death} · {zLoc.lifespan}
+                  <div style={{ padding: '30px 32px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                    <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>{zLoc.role}</div>
+                    <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 34, lineHeight: 1.02, margin: '0 0 6px', color: 'var(--fg)' }}>{zLoc.name}</h3>
+                    <div style={{ fontFamily: 'var(--font-ui)', fontSize: 13, color: 'var(--muted)', marginBottom: 18 }}>
+                      {zavqiyData.birth}–{zavqiyData.death}
+                      {zLoc.lifespan ? ` · ${zLoc.lifespan}` : ''}
                     </div>
-                    <p style={{ fontSize: 15.5, lineHeight: 1.72, color: 'var(--fg)', margin: '0 0 24px' }}>
-                      {zBio}{zBio.length >= 220 ? '…' : ''}
+                    <p style={{ fontSize: 15.5, lineHeight: 1.74, color: 'var(--fg)', margin: '0 0 26px', maxWidth: 560 }}>
+                      {zBio}{zBio.length >= 260 ? '…' : ''}
                     </p>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                       <button
-                        onClick={() => navigate('/museum/zavqiy')}
-                        style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)', padding: '10px 22px', borderRadius: 99, fontSize: 14, fontWeight: 600 }}
-                      >{moreLabel} →</button>
-                      <button
-                        onClick={() => navigate('/museum/zavqiy?visit=true')}
-                        style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', padding: '10px 22px', borderRadius: 99, fontSize: 14, fontWeight: 600 }}
+                        onClick={() => setSearchParams({ visit: 'true', museum: 'zavqiy' })}
+                        style={{ fontFamily: 'var(--font-ui)', cursor: 'pointer', border: 'none', background: 'var(--accent)', color: 'var(--accent-fg)', padding: '11px 24px', borderRadius: 99, fontSize: 14, fontWeight: 600 }}
                       >{tourLabel}</button>
                     </div>
                   </div>
@@ -329,7 +387,7 @@ export default function MuseumPage() {
           )}
         </div>
 
-        <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: 'sticky', top: 80 }}>
+        <aside style={{ display: 'flex', flexDirection: 'column', gap: 14, position: isMobile ? 'static' : 'sticky', top: 80 }}>
           <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 'var(--radius)', padding: 24 }}>
             <h3 style={{ fontFamily: 'var(--font-head)', fontWeight: 700, fontSize: 16, textTransform: 'uppercase', letterSpacing: '.04em', color: 'var(--fg)', margin: '0 0 18px' }}>{t.museumInfo}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

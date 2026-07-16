@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLang } from '../contexts/LangContext';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 export default function ExpositionPlayer({ museum, onExit }) {
   const { lang, t } = useLang();
+  const isMobile = useIsMobile();
   
   // Flatten all exhibits across all halls into a single continuous array.
   // Only exhibits that have their own uploaded image are shown — never fall
@@ -127,67 +129,131 @@ export default function ExpositionPlayer({ museum, onExit }) {
       ))}
 
       {/* Dark Gradient Overlay */}
-      <div style={{ 
-        position: 'absolute', 
-        inset: 0, 
-        background: 'linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 45%, transparent 100%)',
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        background: isMobile
+          ? 'linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 45%, transparent 100%)'
+          : 'linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 45%, transparent 100%)',
         pointerEvents: 'none'
       }} />
 
       {/* Top Bar */}
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '40px 60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0,
+        padding: isMobile ? '18px 16px' : '40px 60px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 16, minWidth: 0, flex: 1 }}>
+          <div style={{
+            width: isMobile ? 36 : 44, height: isMobile ? 36 : 44,
+            borderRadius: 10, background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', flexShrink: 0
+          }}>
+            <svg width={isMobile ? 18 : 24} height={isMobile ? 18 : 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
           </div>
-          <div>
-            <div style={{ fontSize: 13, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 4 }}>Virtual Tour</div>
-            <div style={{ fontFamily: 'var(--font-head)', fontSize: 20, fontWeight: 700 }}>{(museum[lang] || museum.uz || museum.ru || museum.en || museum).name}</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: isMobile ? 10 : 13, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.6)', marginBottom: 2 }}>Virtual Tour</div>
+            <div style={{ fontFamily: 'var(--font-head)', fontSize: isMobile ? 15 : 20, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{(museum[lang] || museum.uz || museum.ru || museum.en || museum).name}</div>
           </div>
         </div>
-        
-        <button onClick={onExit} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 48, height: 48, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .2s', backdropFilter: 'blur(10px)' }} onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'} onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+
+        <button onClick={onExit} style={{
+          background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+          color: '#fff', width: isMobile ? 40 : 48, height: isMobile ? 40 : 48,
+          borderRadius: '50%', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          transition: 'background .2s', backdropFilter: 'blur(10px)', flexShrink: 0, marginLeft: 12
+        }}>
+          <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
       </div>
 
-      {/* Main Content Area (Left side) */}
-      <div style={{ position: 'absolute', top: '50%', left: 60, transform: 'translateY(-50%)', maxWidth: 600, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, animation: 'slideUp .6s ease both' }} key={`hall-${currentIndex}`}>
-          <span style={{ fontSize: 13, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>{t.hall} {current.hallIndex}</span>
-          <span style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.3)' }} />
-          <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>{current.hallTitle}</span>
+      {/* Main Content Area */}
+      <div style={
+        isMobile
+          ? { position: 'absolute', bottom: 20, left: 16, right: 16, zIndex: 10 }
+          : { position: 'absolute', top: '50%', left: 60, transform: 'translateY(-50%)', maxWidth: 600, zIndex: 10 }
+      }>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          marginBottom: isMobile ? 12 : 24,
+          flexWrap: 'wrap',
+          animation: 'slideUp .6s ease both'
+        }} key={`hall-${currentIndex}`}>
+          <span style={{ fontSize: isMobile ? 11 : 13, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>{t.hall} {current.hallIndex}</span>
+          <span style={{ width: 30, height: 1, background: 'rgba(255,255,255,0.3)' }} />
+          <span style={{ fontSize: isMobile ? 12 : 14, color: 'rgba(255,255,255,0.7)' }}>{current.hallTitle}</span>
         </div>
-        
-        <h1 style={{ fontFamily: 'var(--font-head)', fontSize: 'clamp(40px, 5vw, 64px)', fontWeight: 800, lineHeight: 1.1, marginBottom: 24, animation: 'slideUp .6s .1s ease both' }} key={`title-${currentIndex}`}>
+
+        <h1 style={{
+          fontFamily: 'var(--font-head)',
+          fontSize: isMobile ? 'clamp(28px, 8vw, 40px)' : 'clamp(40px, 5vw, 64px)',
+          fontWeight: 800, lineHeight: 1.1,
+          marginBottom: isMobile ? 14 : 24,
+          animation: 'slideUp .6s .1s ease both'
+        }} key={`title-${currentIndex}`}>
           {current.exhibitTitle}
         </h1>
-        
+
         {current.hallSubtitle && (
-          <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, animation: 'slideUp .6s .2s ease both' }} key={`desc-${currentIndex}`}>
+          <p style={{
+            fontSize: isMobile ? 14 : 18,
+            color: 'rgba(255,255,255,0.75)', lineHeight: 1.55,
+            animation: 'slideUp .6s .2s ease both'
+          }} key={`desc-${currentIndex}`}>
             {current.hallSubtitle}
           </p>
         )}
 
         {/* Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 24, marginTop: 48, animation: 'slideUp .6s .3s ease both' }}>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button onClick={handlePrev} disabled={currentIndex === 0} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 56, height: 56, borderRadius: '50%', cursor: currentIndex === 0 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === 0 ? 0.3 : 1, transition: 'background .2s', backdropFilter: 'blur(10px)' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+        <div style={{
+          display: 'flex', alignItems: 'center',
+          gap: isMobile ? 14 : 24,
+          marginTop: isMobile ? 20 : 48,
+          animation: 'slideUp .6s .3s ease both'
+        }}>
+          <div style={{ display: 'flex', gap: isMobile ? 8 : 12 }}>
+            <button onClick={handlePrev} disabled={currentIndex === 0} style={{
+              background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              width: isMobile ? 48 : 56, height: isMobile ? 48 : 56,
+              borderRadius: '50%',
+              cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: currentIndex === 0 ? 0.3 : 1,
+              transition: 'background .2s', backdropFilter: 'blur(10px)'
+            }}>
+              <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
             </button>
-            <button onClick={() => setIsPlaying(!isPlaying)} style={{ background: 'var(--accent)', border: 'none', color: '#fff', width: 56, height: 56, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background .2s', boxShadow: '0 8px 24px rgba(162, 104, 61, 0.4)' }}>
+            <button onClick={() => setIsPlaying(!isPlaying)} style={{
+              background: 'var(--accent)', border: 'none', color: '#fff',
+              width: isMobile ? 48 : 56, height: isMobile ? 48 : 56,
+              borderRadius: '50%', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background .2s', boxShadow: '0 8px 24px rgba(162, 104, 61, 0.4)'
+            }}>
               {isPlaying ? (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                <svg width={isMobile ? 18 : 20} height={isMobile ? 18 : 20} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
               ) : (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
+                <svg width={isMobile ? 18 : 20} height={isMobile ? 18 : 20} viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg>
               )}
             </button>
-            <button onClick={handleNext} disabled={currentIndex === total - 1} style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', width: 56, height: 56, borderRadius: '50%', cursor: currentIndex === total - 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: currentIndex === total - 1 ? 0.3 : 1, transition: 'background .2s', backdropFilter: 'blur(10px)' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
+            <button onClick={handleNext} disabled={currentIndex === total - 1} style={{
+              background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              width: isMobile ? 48 : 56, height: isMobile ? 48 : 56,
+              borderRadius: '50%',
+              cursor: currentIndex === total - 1 ? 'not-allowed' : 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              opacity: currentIndex === total - 1 ? 0.3 : 1,
+              transition: 'background .2s', backdropFilter: 'blur(10px)'
+            }}>
+              <svg width={isMobile ? 20 : 24} height={isMobile ? 20 : 24} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
             </button>
           </div>
-          
-          <div style={{ fontSize: 14, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
+
+          <div style={{ fontSize: isMobile ? 12 : 14, letterSpacing: '.2em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.5)' }}>
             <span style={{ color: '#fff', fontWeight: 700 }}>{(currentIndex + 1).toString().padStart(2, '0')}</span> / {total.toString().padStart(2, '0')}
           </div>
         </div>

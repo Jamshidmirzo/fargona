@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLang } from '../contexts/LangContext';
 import { API_URL } from '../config';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 const MONTHS = {
   ru: ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'],
@@ -30,6 +31,7 @@ export default function NewsPage() {
   const navigate = useNavigate();
   const [news, setNews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setLoading(true);
@@ -40,7 +42,7 @@ export default function NewsPage() {
   }, [lang]);
 
   return (
-    <section style={{ maxWidth: 1080, margin: '0 auto', padding: '26px 40px 100px', animation: 'fhFade .4s ease both' }}>
+    <section style={{ maxWidth: 1080, margin: '0 auto', padding: isMobile ? '18px 16px 60px' : '26px 40px 100px', animation: 'fhFade .4s ease both' }}>
       <div style={{ fontFamily: 'var(--font-ui)', fontSize: 12, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
         {t.nav?.news || 'Новости'}
       </div>
@@ -64,7 +66,7 @@ export default function NewsPage() {
       {!loading && news.length > 0 && (
         <div>
           {news.map(n => (
-            <div key={n.id} onClick={() => navigate(`/news/${n.id}`)} style={{ display: 'grid', gridTemplateColumns: '170px 1fr', gap: 34, padding: '34px 6px', borderTop: '1px solid var(--line)', alignItems: 'start', cursor: 'pointer' }}>
+            <div key={n.id} onClick={() => navigate(`/news/${n.id}`)} style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '170px 1fr', gap: isMobile ? 12 : 34, padding: isMobile ? '22px 4px' : '34px 6px', borderTop: '1px solid var(--line)', alignItems: 'start', cursor: 'pointer' }}>
               <div>
                 <div style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'var(--muted)', fontStyle: 'italic', marginBottom: 12 }}>
                   {fmtDate(n.created_at, lang)}

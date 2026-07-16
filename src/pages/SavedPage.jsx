@@ -2,17 +2,19 @@ import { useLang } from '../contexts/LangContext';
 import { useSaved } from '../contexts/SavedContext';
 import { useMuseums } from '../contexts/MuseumsContext';
 import MuseumCard from '../components/MuseumCard';
+import { useIsMobile } from '../hooks/useMediaQuery';
 
 export default function SavedPage() {
   const { museums, loading } = useMuseums();
   const { t } = useLang();
   const { saved } = useSaved();
+  const isMobile = useIsMobile();
   if (loading) return <div style={{padding:48, textAlign:'center', color:'var(--muted)'}}>Loading museums...</div>;
 
   const savedMuseums = museums.filter(m => saved.includes(m.id));
 
   return (
-    <section style={{ maxWidth: 1180, margin: '0 auto', padding: '26px 24px 90px', animation: 'fhFade .4s ease both' }}>
+    <section style={{ maxWidth: 1180, margin: '0 auto', padding: isMobile ? '18px 16px 60px' : '26px 24px 90px', animation: 'fhFade .4s ease both' }}>
       <div style={{ fontSize: 12, letterSpacing: '.2em', textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>{t.nav.saved}</div>
       <h1 style={{ fontFamily: 'var(--font-head)', fontWeight: 800, fontSize: 'clamp(30px, 4.4vw, 48px)', color: 'var(--fg)', margin: '0 0 8px' }}>{t.savedTitle}</h1>
       <p style={{ fontSize: 16, color: 'var(--muted)', margin: '0 0 34px', maxWidth: 560 }}>{t.savedText}</p>
