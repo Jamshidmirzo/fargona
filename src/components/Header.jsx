@@ -156,16 +156,21 @@ export default function Header() {
 
           {isMobile ? (
             <button
-              onClick={() => setMenuOpen(o => !o)}
+              type="button"
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMenuOpen(o => !o); }}
               aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
               style={{
                 background: 'var(--surface2)', border: '1px solid var(--line)',
                 cursor: 'pointer', color: 'var(--fg)', padding: 0,
                 borderRadius: 10, display: 'flex', alignItems: 'center',
                 justifyContent: 'center', width: 44, height: 44, flexShrink: 0,
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'transparent',
+                position: 'relative', zIndex: 1,
               }}
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" style={{ pointerEvents: 'none' }}>
                 <path d="M3 6h18" /><path d="M3 12h18" /><path d="M3 18h18" />
               </svg>
             </button>

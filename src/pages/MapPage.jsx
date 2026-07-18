@@ -169,8 +169,11 @@ export default function MapPage() {
         flex: 1,
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 340px',
-        gridTemplateRows: isMobile ? '45vh 1fr' : 'none',
-        overflow: 'hidden'
+        // On mobile: shrink the map to 28vh once a museum is selected so
+        // the info panel gets ~72vh to breathe.
+        gridTemplateRows: isMobile ? (selected ? '28vh 1fr' : '45vh 1fr') : 'none',
+        overflow: 'hidden',
+        transition: 'grid-template-rows .3s ease',
       }}>
 
         {/* MAP */}
