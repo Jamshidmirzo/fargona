@@ -169,7 +169,7 @@ export default function MapPage() {
         flex: 1,
         display: 'grid',
         gridTemplateColumns: isMobile ? '1fr' : '1fr 340px',
-        gridTemplateRows: isMobile ? '55vh 1fr' : 'none',
+        gridTemplateRows: isMobile ? '45vh 1fr' : 'none',
         overflow: 'hidden'
       }}>
 
@@ -232,7 +232,13 @@ export default function MapPage() {
         </div>
 
         {/* SIDEBAR */}
-        <div style={{ borderLeft: '1px solid var(--line)', overflowY: 'auto', background: 'var(--surface2)', display: 'flex', flexDirection: 'column' }}>
+        <div style={{
+          borderLeft: isMobile ? 'none' : '1px solid var(--line)',
+          borderTop: isMobile ? '1px solid var(--line)' : 'none',
+          overflowY: 'auto', background: 'var(--surface2)',
+          display: 'flex', flexDirection: 'column',
+          minHeight: 0,
+        }}>
 
           {/* selected museum card */}
           {selectedM ? (

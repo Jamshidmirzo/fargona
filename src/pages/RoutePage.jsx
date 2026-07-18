@@ -218,8 +218,17 @@ export default function RoutePage() {
       {/* ── SCROLLYTELLING ─────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '42% 58%' }}>
 
-        {/* STICKY MAP */}
-        <div style={{ position: 'sticky', top: isMobile ? 64 : 0, height: isMobile ? '45vh' : '100vh', overflow: 'hidden', zIndex: 5, borderBottom: isMobile ? '1px solid var(--line)' : 'none' }}>
+        {/* STICKY MAP (desktop only) — on mobile it becomes a fixed-height
+            hero block that scrolls with the rest of the page, so the user
+            can freely scroll to the story sections below. */}
+        <div style={{
+          position: isMobile ? 'relative' : 'sticky',
+          top: isMobile ? 'auto' : 0,
+          height: isMobile ? 320 : '100vh',
+          overflow: 'hidden',
+          zIndex: 5,
+          borderBottom: isMobile ? '1px solid var(--line)' : 'none',
+        }}>
           <MapContainer
             center={ROUTE[0].coords}
             zoom={13}

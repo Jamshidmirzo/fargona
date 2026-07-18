@@ -49,9 +49,11 @@ export default function HomePage() {
         position: 'relative', maxWidth: 1240, margin: '0 auto',
         padding: isMobile ? '20px 16px 0' : '12px 40px 0'
       }}>
-        <div style={{ position: 'absolute', top: '30%', left: '-2%', fontFamily: 'var(--font-head)', fontStyle: 'italic', fontWeight: 400, fontSize: 'clamp(90px, 22vw, 300px)', color: 'var(--accent)', opacity: 0.06, pointerEvents: 'none', lineHeight: 0.72, zIndex: 0, letterSpacing: '-.02em' }}>
-          Fargʻona
-        </div>
+        {!isMobile && (
+          <div style={{ position: 'absolute', top: '30%', left: '-2%', fontFamily: 'var(--font-head)', fontStyle: 'italic', fontWeight: 400, fontSize: 'clamp(90px, 22vw, 300px)', color: 'var(--accent)', opacity: 0.06, pointerEvents: 'none', lineHeight: 0.72, zIndex: 0, letterSpacing: '-.02em', overflow: 'hidden' }}>
+            Fargʻona
+          </div>
+        )}
         <div style={{
           position: 'relative', zIndex: 1, display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : '1.05fr .95fr',
