@@ -25,6 +25,11 @@ router.post('/:id/exhibits', verifyToken, checkMuseumAccess, museumController.cr
 router.put('/:id/exhibits/:exhibitId', verifyToken, checkMuseumAccess, museumController.updateExhibit);
 router.delete('/:id/exhibits/:exhibitId', verifyToken, checkMuseumAccess, museumController.deleteExhibit);
 
+// Life chronology (biography events on the museum page)
+router.post('/:id/chronology', verifyToken, checkMuseumAccess, museumController.createChronologyEvent);
+router.put('/:id/chronology/:eventId', verifyToken, checkMuseumAccess, museumController.updateChronologyEvent);
+router.delete('/:id/chronology/:eventId', verifyToken, checkMuseumAccess, museumController.deleteChronologyEvent);
+
 // News routes
 router.get('/:id/news', museumController.getMuseumNews);
 router.post('/:id/news', verifyToken, checkMuseumAccess, museumController.createMuseumNews);

@@ -14,13 +14,13 @@ exports.getAllMuseums = (req, res) => {
     const museums = stmt.all(lang);
     
     // Fetch all events for the language and group by museum_id
-    const eventsStmt = db.prepare('SELECT museum_id, year, text FROM events WHERE lang = ?');
+    const eventsStmt = db.prepare('SELECT id, museum_id, year, text FROM events WHERE lang = ? ORDER BY CAST(year AS INTEGER), id');
     const allEvents = eventsStmt.all(lang);
-    
+
     const eventsByMuseum = {};
     allEvents.forEach(e => {
       if (!eventsByMuseum[e.museum_id]) eventsByMuseum[e.museum_id] = [];
-      eventsByMuseum[e.museum_id].push({ year: e.year, text: e.text });
+      eventsByMuseum[e.museum_id].push({ id: e.id, year: e.year, text: e.text });
     });
     
     // Fetch all quizzes for the language and group by museum_id
@@ -103,7 +103,7 @@ exports.getMuseumById = (req, res) => {
     const m = stmt.get(lang, id);
     if (!m) return res.status(404).json({ error: 'Museum not found' });
     
-    const eventsStmt = db.prepare('SELECT year, text FROM events WHERE museum_id = ? AND lang = ?');
+    const eventsStmt = db.prepare('SELECT id, year, text FROM events WHERE museum_id = ? AND lang = ? ORDER BY CAST(year AS INTEGER), id');
     const events = eventsStmt.all(id, lang);
     
     const quizzesStmt = db.prepare('SELECT id, question AS q, options, answer AS a FROM quizzes WHERE museum_id = ? AND lang = ?');
@@ -389,6 +389,75 @@ exports.updateExhibit = (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Failed to update exhibit' });
+  }
+};
+
+// ── Life chronology (biography events) ──────────────────────────────────────
+// Stored in the `events` table (museum_id, lang, year, text). Each admin
+// action creates/updates/deletes a single row for a single language, so an
+// entry may exist in one language and not another. Create does a fan-out to
+// all languages by default to mirror the exhibit behavior.
+exports.createChronologyEvent = (req, res) => {
+  try {
+    const { id } = req.params; // museum_id
+    const { lang = 'uz' } = req.query;
+    const { year, text } = req.body;
+
+    if (!year && !text) {
+      return res.status(400).json({ error: 'year or text is required' });
+    }
+
+    const insertStmt = db.prepare(
+      'INSERT INTO events (museum_id, lang, year, text) VALUES (?, ?, ?, ?)'
+    );
+
+    const langs = ['uz', 'ru', 'en'];
+    const insertedIds = {};
+
+    db.transaction(() => {
+      for (const l of langs) {
+        const isCurrent = l === lang;
+        const result = insertStmt.run(
+          id,
+          l,
+          year || '',
+          isCurrent ? (text || '') : ''
+        );
+        insertedIds[l] = result.lastInsertRowid;
+      }
+    })();
+
+    res.json({ success: true, id: insertedIds[lang] || insertedIds.uz, ids: insertedIds });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create chronology event' });
+  }
+};
+
+exports.updateChronologyEvent = (req, res) => {
+  try {
+    const { id, eventId } = req.params;
+    const { year, text } = req.body;
+    const stmt = db.prepare('UPDATE events SET year = ?, text = ? WHERE id = ? AND museum_id = ?');
+    const result = stmt.run(year || '', text || '', eventId, id);
+    if (result.changes === 0) return res.status(404).json({ error: 'Event not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to update chronology event' });
+  }
+};
+
+exports.deleteChronologyEvent = (req, res) => {
+  try {
+    const { id, eventId } = req.params;
+    const stmt = db.prepare('DELETE FROM events WHERE id = ? AND museum_id = ?');
+    const result = stmt.run(eventId, id);
+    if (result.changes === 0) return res.status(404).json({ error: 'Event not found' });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Failed to delete chronology event' });
   }
 };
 
